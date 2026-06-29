@@ -20,6 +20,10 @@ app.use('/api/machines',  require('./routes/machines'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/alerts',    require('./routes/alerts'));
 app.use('/api/commands', require('./routes/commands'));
+app.use('/api/equipment',   require('./routes/equipment'));
+app.use('/api/maintenance', require('./routes/maintenance'));
+app.use('/api/complaints',  require('./routes/complaints'));
+app.use('/api/inventory',   require('./routes/inventory'));
 app.get('/', (req, res) => res.json({ success: true, message: 'LabCommand API running' }));
 
 app.use((err, req, res, next) => {
