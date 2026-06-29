@@ -17,6 +17,7 @@ import Users    from './pages/Users';
 import AuditLog from './pages/AuditLog';
 import Analytics from './pages/Analytics';
 import Predictions from './pages/Predictions';
+import Classroom from './pages/Classroom';
 
 function PrivateRoute({ children, roles }) {
   const { user } = useAuth();
@@ -42,7 +43,7 @@ function AppRoutes() {
       <Route path="/dashboard"   element={<PrivateRoute roles={['admin','staff']}><Dashboard /></PrivateRoute>} />
       <Route path="/lab-map"     element={<PrivateRoute roles={['admin','staff']}><LabMap /></PrivateRoute>} />
       <Route path="/machines/:id" element={<PrivateRoute roles={['admin','staff']}><MachineDetail /></PrivateRoute>} />
-      <Route path="/classroom"   element={<PrivateRoute roles={['admin','staff','invigilator']}><Placeholder title="Classroom Mode" /></PrivateRoute>} />
+      <Route path="/classroom" element={<PrivateRoute roles={['admin','staff','invigilator']}><Classroom /></PrivateRoute>} />
       <Route path="/exam"        element={<PrivateRoute roles={['admin','staff','invigilator']}><ExamSetup /></PrivateRoute>} />
       <Route path="/exam/war-room/:id" element={<PrivateRoute roles={['admin','staff','invigilator']}><ExamWarRoom /></PrivateRoute>} />
       <Route path="/exam/student/:sessionId/:machineId" element={<ExamStudent />} />

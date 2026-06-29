@@ -29,6 +29,7 @@ app.use('/api/booking',  require('./routes/booking'));
 app.use('/api/users',    require('./routes/users'));
 app.use('/api/auditlog', require('./routes/auditlog'));
 app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/classroom', require('./routes/classroom'));
 app.get('/', (req, res) => res.json({ success: true, message: 'LabCommand API running' }));
 
 app.use((err, req, res, next) => {
