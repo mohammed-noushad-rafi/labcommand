@@ -15,6 +15,7 @@ import ExamStudent from './pages/ExamStudent';
 import Booking  from './pages/Booking';
 import Users    from './pages/Users';
 import AuditLog from './pages/AuditLog';
+import Analytics from './pages/Analytics';
 
 function PrivateRoute({ children, roles }) {
   const { user } = useAuth();
@@ -49,7 +50,7 @@ function AppRoutes() {
       <Route path="/complaints"  element={<PrivateRoute><Complaints /></PrivateRoute>} />
       <Route path="/inventory"   element={<PrivateRoute roles={['admin','staff']}><Inventory /></PrivateRoute>} />
       <Route path="/predictions" element={<PrivateRoute roles={['admin','staff']}><Placeholder title="AI Predictions" /></PrivateRoute>} />
-      <Route path="/analytics"   element={<PrivateRoute roles={['admin']}><Placeholder title="Analytics" /></PrivateRoute>} />
+      <Route path="/analytics" element={<PrivateRoute roles={['admin']}><Analytics /></PrivateRoute>} />
       <Route path="/booking" element={<PrivateRoute><Booking /></PrivateRoute>} />
       <Route path="/users"   element={<PrivateRoute roles={['admin']}><Users /></PrivateRoute>} />
       <Route path="/audit"   element={<PrivateRoute roles={['admin']}><AuditLog /></PrivateRoute>} />
