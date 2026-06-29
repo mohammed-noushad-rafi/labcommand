@@ -25,6 +25,9 @@ app.use('/api/maintenance', require('./routes/maintenance'));
 app.use('/api/complaints',  require('./routes/complaints'));
 app.use('/api/inventory',   require('./routes/inventory'));
 app.use('/api/exams', require('./routes/exams'));
+app.use('/api/booking',  require('./routes/booking'));
+app.use('/api/users',    require('./routes/users'));
+app.use('/api/auditlog', require('./routes/auditlog'));
 app.get('/', (req, res) => res.json({ success: true, message: 'LabCommand API running' }));
 
 app.use((err, req, res, next) => {
