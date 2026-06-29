@@ -5,10 +5,13 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import LabMap from './pages/LabMap';
 import MachineDetail from './pages/MachineDetail';
-import Equipment   from './pages/Equipment';
+import Equipment from './pages/Equipment';
 import Maintenance from './pages/Maintenance';
-import Complaints  from './pages/Complaints';
-import Inventory   from './pages/Inventory';
+import Complaints from './pages/Complaints';
+import Inventory from './pages/Inventory';
+import ExamSetup from './pages/ExamSetup';
+import ExamWarRoom from './pages/ExamWarRoom';
+import ExamStudent from './pages/ExamStudent';
 
 function PrivateRoute({ children, roles }) {
   const { user } = useAuth();
@@ -32,10 +35,12 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
       <Route path="/dashboard"   element={<PrivateRoute roles={['admin','staff']}><Dashboard /></PrivateRoute>} />
-      <Route path="/lab-map" element={<PrivateRoute roles={['admin','staff']}><LabMap /></PrivateRoute>} />
+      <Route path="/lab-map"     element={<PrivateRoute roles={['admin','staff']}><LabMap /></PrivateRoute>} />
       <Route path="/machines/:id" element={<PrivateRoute roles={['admin','staff']}><MachineDetail /></PrivateRoute>} />
       <Route path="/classroom"   element={<PrivateRoute roles={['admin','staff','invigilator']}><Placeholder title="Classroom Mode" /></PrivateRoute>} />
-      <Route path="/exam"        element={<PrivateRoute roles={['admin','staff','invigilator']}><Placeholder title="Exam Monitor" /></PrivateRoute>} />
+      <Route path="/exam"        element={<PrivateRoute roles={['admin','staff','invigilator']}><ExamSetup /></PrivateRoute>} />
+      <Route path="/exam/war-room/:id" element={<PrivateRoute roles={['admin','staff','invigilator']}><ExamWarRoom /></PrivateRoute>} />
+      <Route path="/exam/student/:sessionId/:machineId" element={<ExamStudent />} />
       <Route path="/equipment"   element={<PrivateRoute roles={['admin','staff']}><Equipment /></PrivateRoute>} />
       <Route path="/maintenance" element={<PrivateRoute roles={['admin','staff']}><Maintenance /></PrivateRoute>} />
       <Route path="/complaints"  element={<PrivateRoute><Complaints /></PrivateRoute>} />

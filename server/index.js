@@ -24,6 +24,7 @@ app.use('/api/equipment',   require('./routes/equipment'));
 app.use('/api/maintenance', require('./routes/maintenance'));
 app.use('/api/complaints',  require('./routes/complaints'));
 app.use('/api/inventory',   require('./routes/inventory'));
+app.use('/api/exams', require('./routes/exams'));
 app.get('/', (req, res) => res.json({ success: true, message: 'LabCommand API running' }));
 
 app.use((err, req, res, next) => {
@@ -40,6 +41,12 @@ io.on('connection', (socket) => {
     const { machineId, hostname, ip, os } = data;
     agentRegistry.set(machineId, socket);
     socket.machineId = machineId;
+  
+  socket.on('exam:violation', async (data) => {
+    const { sessionId, machineId, studentName, eventType, metadata } = data;
+    const { processViolation } = require('./utils/trustScore');
+    await processViolation(sessionId, machineId, studentName, eventType, metadata);
+  });  
 
     const pool = require('./db/connection');
     await pool.query(
