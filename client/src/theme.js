@@ -1,43 +1,30 @@
 export const theme = {
-  // Single accent color, used sparingly — everything else is grayscale
-  accent:      '#1a1a2e',
-  accentSoft:  '#f4f4f8',
-  text:        '#1a1a2e',
-  textMuted:   '#888888',
-  textFaint:   '#bbbbbb',
-  border:      '#ececf0',
-  borderSoft:  '#f5f5f7',
-  bg:          '#fafafa',
+  accent:      '#4f46e5',
+  accentSoft:  '#eef2ff',
+  accentHover: '#4338ca',
+
+  text:        '#16161f',
+  textMuted:   '#7c7c8a',
+  textFaint:   '#b4b4c0',
+  border:      '#e9e9f0',
+  borderSoft:  '#f3f3f8',
+  bg:          '#f7f7fb',
   surface:     '#ffffff',
 
   status: {
-    success: '#1a8754',
-    successSoft: '#eaf6ef',
-    warning: '#a16207',
-    warningSoft: '#fdf6e3',
-    danger:  '#b91c1c',
-    dangerSoft: '#fcecec',
-    info:    '#374151',
-    infoSoft: '#f3f4f6',
+    success:     '#0f9d58',
+    successSoft: '#e3f7ea',
+    warning:     '#d97706',
+    warningSoft: '#fef3e2',
+    danger:      '#dc2626',
+    dangerSoft:  '#fde9e9',
+    info:        '#2563eb',
+    infoSoft:    '#e8f0fe',
+    purple:      '#7c3aed',
+    purpleSoft:  '#f1ebfe',
   },
 
-  radius: { sm:6, md:10, lg:12, pill:20 },
-  shadow: '0 1px 2px rgba(0,0,0,0.04)',
-};
-
-export const cardBase = {
-  background: theme.surface,
-  borderRadius: theme.radius.lg,
-  border: `1px solid ${theme.border}`,
-  boxShadow: theme.shadow,
-};
-
-export const badge = (status='info') => {
-  const s = theme.status[status] || theme.status.info;
-  const bg = theme.status[`${status}Soft`] || theme.status.infoSoft;
-  return {
-    padding:'3px 10px', borderRadius: theme.radius.pill,
-    fontSize:11, fontWeight:500, background:bg, color:s,
-    letterSpacing:'0.01em',
-  };
+  radius: { sm:8, md:10, lg:14, pill:20 },
+  shadow: '0 1px 3px rgba(16,16,30,0.06)',
+  shadowMd: '0 4px 16px rgba(16,16,30,0.08)',
 };

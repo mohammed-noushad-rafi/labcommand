@@ -4,7 +4,8 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveCo
 import EmptyState from '../components/EmptyState';
 import { useLab } from '../context/LabContext';
 
-const PIE_COLORS = { working:'#1a1a2e', faulty:'#b91c1c', maintenance:'#a16207' };
+const PIE_COLORS = { working:'#0f9d58', faulty:'#dc2626', maintenance:'#d97706' };
+const CARD_DOTS  = ['#4f46e5','#0f9d58','#d97706','#dc2626','#2563eb','#7c3aed'];
 
 export default function Dashboard() {
   const { selectedLab, selectedLabName } = useLab();
@@ -40,8 +41,9 @@ export default function Dashboard() {
       </div>
 
       <div style={s.grid6}>
-        {cards.map(c => (
+        {cards.map((c, i) => (
           <div key={c.label} style={s.card}>
+            <div style={{ ...s.dot, background: CARD_DOTS[i % CARD_DOTS.length] }} />
             <div style={s.statNum}>{c.value ?? 0}</div>
             <div style={s.statLabel}>{c.label}</div>
           </div>
@@ -54,8 +56,8 @@ export default function Dashboard() {
           {data?.equipment_status?.length ? (
             <ResponsiveContainer width="100%" height={210}>
               <PieChart>
-                <Pie data={data.equipment_status.map(e=>({...e,value:parseInt(e.value)}))} dataKey="value" nameKey="status" cx="50%" cy="50%" innerRadius={48} outerRadius={78} paddingAngle={2}>
-                  {data.equipment_status.map((e,i) => <Cell key={i} fill={PIE_COLORS[e.status] || '#ccc'} stroke="none" />)}
+                <Pie data={data.equipment_status.map(e=>({...e,value:parseInt(e.value)}))} dataKey="value" nameKey="status" cx="50%" cy="50%" innerRadius={48} outerRadius={78} paddingAngle={3}>
+                  {data.equipment_status.map((e,i) => <Cell key={i} fill={PIE_COLORS[e.status] || '#c4c4cc'} stroke="none" />)}
                 </Pie>
                 <Tooltip />
               </PieChart>
@@ -65,7 +67,7 @@ export default function Dashboard() {
             <div style={s.legendRow}>
               {data.equipment_status.map(e => (
                 <div key={e.status} style={s.legendItem}>
-                  <span style={{...s.legendDot, background:PIE_COLORS[e.status]||'#ccc'}}/>
+                  <span style={{...s.legendDot, background:PIE_COLORS[e.status]||'#c4c4cc'}}/>
                   <span style={s.legendLabel}>{e.status}</span>
                   <span style={s.legendValue}>{e.value}</span>
                 </div>
@@ -79,10 +81,10 @@ export default function Dashboard() {
           {data?.weekly_slots?.length ? (
             <ResponsiveContainer width="100%" height={210}>
               <BarChart data={data.weekly_slots}>
-                <XAxis dataKey="day" tick={{fontSize:11, fill:'#999'}} axisLine={{stroke:'#ececf0'}} tickLine={false}/>
-                <YAxis allowDecimals={false} tick={{fontSize:11, fill:'#999'}} axisLine={false} tickLine={false}/>
-                <Tooltip cursor={{fill:'#f7f7f9'}}/>
-                <Bar dataKey="bookings" fill="#1a1a2e" radius={[3,3,0,0]} maxBarSize={28}/>
+                <XAxis dataKey="day" tick={{fontSize:11, fill:'#a8a8b8'}} axisLine={{stroke:'#e9e9f0'}} tickLine={false}/>
+                <YAxis allowDecimals={false} tick={{fontSize:11, fill:'#a8a8b8'}} axisLine={false} tickLine={false}/>
+                <Tooltip cursor={{fill:'#f7f7fb'}}/>
+                <Bar dataKey="bookings" fill="#4f46e5" radius={[4,4,0,0]} maxBarSize={28}/>
               </BarChart>
             </ResponsiveContainer>
           ) : <EmptyState title="No bookings this week" subtitle="Bookings will appear here once labs are reserved."/>}
@@ -100,15 +102,15 @@ export default function Dashboard() {
               {data.maintenance_due.map(m => (
                 <tr key={m.id}>
                   <td style={s.td}>{m.equipment_name}</td>
-                  <td style={{...s.td, color:'#999'}}>{m.lab_name}</td>
-                  <td style={{...s.td, color:'#999'}}>{m.technician}</td>
-                  <td style={{...s.td, color:'#999'}}>{new Date(m.scheduled_date).toLocaleDateString('en-IN')}</td>
+                  <td style={{...s.td, color:'#9494a3'}}>{m.lab_name}</td>
+                  <td style={{...s.td, color:'#9494a3'}}>{m.technician}</td>
+                  <td style={{...s.td, color:'#9494a3'}}>{new Date(m.scheduled_date).toLocaleDateString('en-IN')}</td>
                   <td style={s.td}>₹{Number(m.cost).toLocaleString()}</td>
                   <td style={s.td}>
                     <span style={{
-                      padding:'2px 9px', borderRadius:20, fontSize:11, fontWeight:500,
-                      background: m.status==='in_progress' ? '#fdf6e3' : '#f3f4f6',
-                      color: m.status==='in_progress' ? '#a16207' : '#374151',
+                      padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600,
+                      background: m.status==='in_progress' ? '#fef3e2' : '#e8f0fe',
+                      color: m.status==='in_progress' ? '#d97706' : '#2563eb',
                     }}>{m.status.replace('_',' ')}</span>
                   </td>
                 </tr>
@@ -123,24 +125,25 @@ export default function Dashboard() {
 
 const s = {
   page:       { padding:'32px 36px', maxWidth:1180, fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif' },
-  loading:    { padding:60, textAlign:'center', color:'#bbb', fontSize:13 },
-  header:     { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:28, flexWrap:'wrap', gap:14, borderBottom:'1px solid #ececf0', paddingBottom:20 },
-  title:      { fontSize:22, fontWeight:600, color:'#1a1a2e', margin:0, letterSpacing:'-0.01em' },
-  sub:        { fontSize:13, color:'#999', marginTop:3 },
-  date:       { fontSize:11.5, color:'#bbb' },
-  grid6:      { display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:1, marginBottom:28, background:'#ececf0', border:'1px solid #ececf0', borderRadius:12, overflow:'hidden' },
-  card:       { background:'#fff', padding:'22px 18px' },
-  statNum:    { fontSize:28, fontWeight:600, color:'#1a1a2e', letterSpacing:'-0.02em' },
-  statLabel:  { fontSize:12, color:'#999', marginTop:4 },
+  loading:    { padding:60, textAlign:'center', color:'#b4b4c0', fontSize:13 },
+  header:     { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:28, flexWrap:'wrap', gap:14, borderBottom:'1px solid #e9e9f0', paddingBottom:20 },
+  title:      { fontSize:23, fontWeight:700, color:'#16161f', margin:0, letterSpacing:'-0.01em' },
+  sub:        { fontSize:13, color:'#7c7c8a', marginTop:3 },
+  date:       { fontSize:11.5, color:'#b4b4c0' },
+  grid6:      { display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:14, marginBottom:28 },
+  card:       { background:'#fff', border:'1px solid #e9e9f0', borderRadius:14, padding:'18px 18px', boxShadow:'0 1px 3px rgba(16,16,30,0.04)' },
+  dot:        { width:6, height:6, borderRadius:'50%', marginBottom:10 },
+  statNum:    { fontSize:28, fontWeight:800, color:'#16161f', letterSpacing:'-0.02em' },
+  statLabel:  { fontSize:12, color:'#7c7c8a', marginTop:4, fontWeight:500 },
   grid2:      { display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(360px,1fr))', gap:20, marginBottom:20 },
-  panel:      { background:'#fff', border:'1px solid #ececf0', borderRadius:12, padding:'22px 24px' },
-  panelTitle: { fontSize:13.5, fontWeight:600, color:'#1a1a2e', marginBottom:18 },
-  legendRow:  { display:'flex', gap:18, marginTop:14, paddingTop:14, borderTop:'1px solid #f5f5f7', flexWrap:'wrap' },
+  panel:      { background:'#fff', border:'1px solid #e9e9f0', borderRadius:14, padding:'22px 24px', boxShadow:'0 1px 3px rgba(16,16,30,0.04)' },
+  panelTitle: { fontSize:14, fontWeight:700, color:'#16161f', marginBottom:18 },
+  legendRow:  { display:'flex', gap:18, marginTop:14, paddingTop:14, borderTop:'1px solid #f0f0f6', flexWrap:'wrap' },
   legendItem: { display:'flex', alignItems:'center', gap:6, fontSize:12 },
-  legendDot:  { width:7, height:7, borderRadius:'50%' },
-  legendLabel:{ color:'#999', textTransform:'capitalize' },
-  legendValue:{ color:'#1a1a2e', fontWeight:600 },
+  legendDot:  { width:8, height:8, borderRadius:'50%' },
+  legendLabel:{ color:'#7c7c8a', textTransform:'capitalize', fontWeight:500 },
+  legendValue:{ color:'#16161f', fontWeight:700 },
   table:      { width:'100%', borderCollapse:'collapse', fontSize:13 },
-  th:         { textAlign:'left', padding:'9px 10px', color:'#bbb', fontWeight:500, fontSize:11, textTransform:'uppercase', letterSpacing:'0.05em', borderBottom:'1px solid #ececf0' },
-  td:         { padding:'12px 10px', color:'#1a1a2e', borderBottom:'1px solid #f5f5f7' },
+  th:         { textAlign:'left', padding:'10px 10px', color:'#a8a8b8', fontWeight:600, fontSize:10.5, textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1.5px solid #e9e9f0' },
+  td:         { padding:'13px 10px', color:'#16161f', borderBottom:'1px solid #f0f0f6' },
 };
