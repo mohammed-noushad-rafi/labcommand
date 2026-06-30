@@ -5,7 +5,14 @@ import EmptyState from '../components/EmptyState';
 import { useLab } from '../context/LabContext';
 
 const PIE_COLORS = { working:'#0f9d58', faulty:'#dc2626', maintenance:'#d97706' };
-const CARD_DOTS  = ['#4f46e5','#0f9d58','#d97706','#dc2626','#2563eb','#7c3aed'];
+const PALETTE = [
+  { dot:'#4f46e5', bg:'#f5f4fe' },
+  { dot:'#0f9d58', bg:'#eefbf3' },
+  { dot:'#d97706', bg:'#fef8ee' },
+  { dot:'#dc2626', bg:'#fef2f2' },
+  { dot:'#2563eb', bg:'#eff5fe' },
+  { dot:'#7c3aed', bg:'#f6f1fe' },
+];
 
 export default function Dashboard() {
   const { selectedLab, selectedLabName } = useLab();
@@ -32,6 +39,7 @@ export default function Dashboard() {
 
   return (
     <div style={s.page}>
+      <div style={s.accentBar} />
       <div style={s.header}>
         <div>
           <h1 style={s.title}>Dashboard</h1>
@@ -41,13 +49,16 @@ export default function Dashboard() {
       </div>
 
       <div style={s.grid6}>
-        {cards.map((c, i) => (
-          <div key={c.label} style={s.card}>
-            <div style={{ ...s.dot, background: CARD_DOTS[i % CARD_DOTS.length] }} />
-            <div style={s.statNum}>{c.value ?? 0}</div>
-            <div style={s.statLabel}>{c.label}</div>
-          </div>
-        ))}
+        {cards.map((c, i) => {
+          const p = PALETTE[i % PALETTE.length];
+          return (
+            <div key={c.label} style={{ ...s.card, background:p.bg, border:'1px solid transparent' }}>
+              <div style={{ width:6, height:6, borderRadius:'50%', background:p.dot, marginBottom:10 }} />
+              <div style={{ ...s.statNum, color:p.dot }}>{c.value ?? 0}</div>
+              <div style={s.statLabel}>{c.label}</div>
+            </div>
+          );
+        })}
       </div>
 
       <div style={s.grid2}>
@@ -126,14 +137,14 @@ export default function Dashboard() {
 const s = {
   page:       { padding:'32px 36px', maxWidth:1180, fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif' },
   loading:    { padding:60, textAlign:'center', color:'#b4b4c0', fontSize:13 },
+  accentBar:  { height:3, width:64, borderRadius:2, background:'linear-gradient(90deg,#4f46e5,#7c3aed)', marginBottom:16 },
   header:     { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:28, flexWrap:'wrap', gap:14, borderBottom:'1px solid #e9e9f0', paddingBottom:20 },
   title:      { fontSize:23, fontWeight:700, color:'#16161f', margin:0, letterSpacing:'-0.01em' },
   sub:        { fontSize:13, color:'#7c7c8a', marginTop:3 },
   date:       { fontSize:11.5, color:'#b4b4c0' },
   grid6:      { display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:14, marginBottom:28 },
-  card:       { background:'#fff', border:'1px solid #e9e9f0', borderRadius:14, padding:'18px 18px', boxShadow:'0 1px 3px rgba(16,16,30,0.04)' },
-  dot:        { width:6, height:6, borderRadius:'50%', marginBottom:10 },
-  statNum:    { fontSize:28, fontWeight:800, color:'#16161f', letterSpacing:'-0.02em' },
+  card:       { borderRadius:14, padding:'18px 18px', boxShadow:'0 1px 3px rgba(16,16,30,0.04)' },
+  statNum:    { fontSize:28, fontWeight:800, letterSpacing:'-0.02em' },
   statLabel:  { fontSize:12, color:'#7c7c8a', marginTop:4, fontWeight:500 },
   grid2:      { display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(360px,1fr))', gap:20, marginBottom:20 },
   panel:      { background:'#fff', border:'1px solid #e9e9f0', borderRadius:14, padding:'22px 24px', boxShadow:'0 1px 3px rgba(16,16,30,0.04)' },
@@ -144,6 +155,6 @@ const s = {
   legendLabel:{ color:'#7c7c8a', textTransform:'capitalize', fontWeight:500 },
   legendValue:{ color:'#16161f', fontWeight:700 },
   table:      { width:'100%', borderCollapse:'collapse', fontSize:13 },
-  th:         { textAlign:'left', padding:'10px 10px', color:'#a8a8b8', fontWeight:600, fontSize:10.5, textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1.5px solid #e9e9f0' },
-  td:         { padding:'13px 10px', color:'#16161f', borderBottom:'1px solid #f0f0f6' },
+  th:         { textAlign:'left', padding:'11px 12px', color:'#a8a8b8', fontWeight:700, fontSize:10.5, textTransform:'uppercase', letterSpacing:'0.07em', borderBottom:'2px solid #f0f0f6', background:'#fafafd' },
+  td:         { padding:'14px 12px', color:'#16161f', borderBottom:'1px solid #f0f0f6' },
 };

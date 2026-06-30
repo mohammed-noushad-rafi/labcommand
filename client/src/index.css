@@ -3,3 +3,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 a { text-decoration: none; }
 button { font-family: inherit; }
 input, select, textarea { font-family: inherit; }
+table tbody tr:hover td {
+  background-color: #fafafd;
+  transition: background-color .12s;
+}
