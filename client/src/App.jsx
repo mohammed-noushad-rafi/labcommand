@@ -18,6 +18,7 @@ import AuditLog from './pages/AuditLog';
 import Analytics from './pages/Analytics';
 import Predictions from './pages/Predictions';
 import Classroom from './pages/Classroom';
+import { LabProvider } from './context/LabContext';
 
 function PrivateRoute({ children, roles }) {
   const { user } = useAuth();
@@ -66,8 +67,10 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
-    </BrowserRouter>
+        <LabProvider>
+     <AppRoutes />
+        </LabProvider>
+    </AuthProvider>
+   </BrowserRouter> 
   );
 }

@@ -2,16 +2,14 @@ import { useEffect, useState } from 'react';
 import api from '../api/axios';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import EmptyState from '../components/EmptyState';
+import { useLab } from '../context/LabContext';
 
 const PIE_COLORS = { working:'#1a1a2e', faulty:'#b91c1c', maintenance:'#a16207' };
 
 export default function Dashboard() {
+  const { selectedLab, selectedLabName } = useLab();
   const [data, setData]       = useState(null);
-  const [labs, setLabs]       = useState([]);
-  const [selectedLab, setSelectedLab] = useState('all');
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => { api.get('/labs').then(r => setLabs(r.data.data || [])); }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -31,22 +29,14 @@ export default function Dashboard() {
     { label:'AI critical risk', value: stats.critical_ai },
   ];
 
-  const selectedLabName = selectedLab === 'all' ? null : labs.find(l=>l.id===parseInt(selectedLab))?.name;
-
   return (
     <div style={s.page}>
       <div style={s.header}>
         <div>
           <h1 style={s.title}>Dashboard</h1>
-          <p style={s.sub}>{selectedLabName ? selectedLabName : 'Overview across all labs'}</p>
+          <p style={s.sub}>{selectedLab === 'all' ? 'Overview across all labs' : selectedLabName}</p>
         </div>
-        <div style={s.headerRight}>
-          <select value={selectedLab} onChange={e=>setSelectedLab(e.target.value)} style={s.select}>
-            <option value="all">All labs</option>
-            {labs.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-          </select>
-          <span style={s.date}>{new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long' })}</span>
-        </div>
+        <span style={s.date}>{new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long' })}</span>
       </div>
 
       <div style={s.grid6}>
@@ -137,8 +127,6 @@ const s = {
   header:     { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:28, flexWrap:'wrap', gap:14, borderBottom:'1px solid #ececf0', paddingBottom:20 },
   title:      { fontSize:22, fontWeight:600, color:'#1a1a2e', margin:0, letterSpacing:'-0.01em' },
   sub:        { fontSize:13, color:'#999', marginTop:3 },
-  headerRight:{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:6 },
-  select:     { border:'1px solid #ececf0', borderRadius:8, padding:'6px 10px', fontSize:13, color:'#1a1a2e', background:'#fff', cursor:'pointer', outline:'none' },
   date:       { fontSize:11.5, color:'#bbb' },
   grid6:      { display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:1, marginBottom:28, background:'#ececf0', border:'1px solid #ececf0', borderRadius:12, overflow:'hidden' },
   card:       { background:'#fff', padding:'22px 18px' },
