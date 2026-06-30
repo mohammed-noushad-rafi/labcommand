@@ -30,6 +30,7 @@ app.use('/api/users',    require('./routes/users'));
 app.use('/api/auditlog', require('./routes/auditlog'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/classroom', require('./routes/classroom'));
+app.use('/api/assistant', require('./routes/assistant'));
 app.get('/', (req, res) => res.json({ success: true, message: 'LabCommand API running' }));
 
 app.use((err, req, res, next) => {
