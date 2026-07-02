@@ -28,6 +28,7 @@ const NAV = {
     { group:'Admin', items:[
       { path:'/users', label:'Users' },
       { path:'/audit', label:'Audit log' },
+      { path:'/emaillog', label:'Email log' },
     ]},
   ],
   staff: [
@@ -64,7 +65,7 @@ const PAGE_TITLES = {
   '/dashboard':'Dashboard', '/lab-map':'Lab map', '/classroom':'Classroom mode',
   '/exam':'Exam monitor', '/equipment':'Equipment', '/maintenance':'Maintenance',
   '/complaints':'Complaints', '/inventory':'Inventory', '/predictions':'AI predictions',
-  '/booking':'Lab booking', '/analytics':'Analytics', '/users':'Users', '/audit':'Audit log',
+  '/booking':'Lab booking', '/analytics':'Analytics', '/users':'Users', '/audit':'Audit log', '/emaillog':'Email log',
 };
 
 function getPageTitle(pathname) {

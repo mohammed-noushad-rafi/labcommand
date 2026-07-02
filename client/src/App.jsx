@@ -15,6 +15,7 @@ import ExamStudent from './pages/ExamStudent';
 import Booking  from './pages/Booking';
 import Users    from './pages/Users';
 import AuditLog from './pages/AuditLog';
+import EmailLog from './pages/EmailLog';
 import Analytics from './pages/Analytics';
 import Predictions from './pages/Predictions';
 import Classroom from './pages/Classroom';
@@ -56,6 +57,7 @@ function AppRoutes() {
       <Route path="/analytics" element={<PrivateRoute roles={['admin']}><Analytics /></PrivateRoute>} />
       <Route path="/booking" element={<PrivateRoute><Booking /></PrivateRoute>} />
       <Route path="/users"   element={<PrivateRoute roles={['admin']}><Users /></PrivateRoute>} />
+      <Route path="/emaillog" element={<PrivateRoute roles={['admin']}><EmailLog /></PrivateRoute>} />
       <Route path="/audit"   element={<PrivateRoute roles={['admin']}><AuditLog /></PrivateRoute>} />
       <Route path="/" element={<Navigate to={user ? (user.role === 'student' || user.role === 'invigilator' ? '/booking' : '/dashboard') : '/login'} />} />
       <Route path="*" element={<Navigate to="/" />} />

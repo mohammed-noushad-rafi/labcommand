@@ -27,6 +27,7 @@ app.use('/api/inventory',   require('./routes/inventory'));
 app.use('/api/exams', require('./routes/exams'));
 app.use('/api/booking',  require('./routes/booking'));
 app.use('/api/users',    require('./routes/users'));
+app.use('/api/emaillog', require('./routes/emaillog'));
 app.use('/api/auditlog', require('./routes/auditlog'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/classroom', require('./routes/classroom'));
