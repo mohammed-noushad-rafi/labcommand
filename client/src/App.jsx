@@ -23,7 +23,7 @@ import { LabProvider } from './context/LabContext';
 function PrivateRoute({ children, roles }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" />;
-  if (roles && !roles.includes(user.role)) return <Navigate to="/dashboard" />;
+  if (roles && !roles.includes(user.role)) return <Navigate to="/booking" />;
   return <Layout>{children}</Layout>;
 }
 
@@ -40,7 +40,7 @@ function AppRoutes() {
   const { user } = useAuth();
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
+      <Route path="/login" element={user ? <Navigate to={user.role === "student" || user.role === "invigilator" ? "/booking" : "/dashboard"} /> : <Login />} />
       <Route path="/dashboard"   element={<PrivateRoute roles={['admin','staff']}><Dashboard /></PrivateRoute>} />
       <Route path="/lab-map"     element={<PrivateRoute roles={['admin','staff']}><LabMap /></PrivateRoute>} />
       <Route path="/machines/:id" element={<PrivateRoute roles={['admin','staff']}><MachineDetail /></PrivateRoute>} />
@@ -57,7 +57,7 @@ function AppRoutes() {
       <Route path="/booking" element={<PrivateRoute><Booking /></PrivateRoute>} />
       <Route path="/users"   element={<PrivateRoute roles={['admin']}><Users /></PrivateRoute>} />
       <Route path="/audit"   element={<PrivateRoute roles={['admin']}><AuditLog /></PrivateRoute>} />
-      <Route path="/" element={<Navigate to={user ? '/dashboard' : '/login'} />} />
+      <Route path="/" element={<Navigate to={user ? (user.role === 'student' || user.role === 'invigilator' ? '/booking' : '/dashboard') : '/login'} />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

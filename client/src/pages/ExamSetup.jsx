@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import PageHeader, { Panel, StatRow } from '../components/PageHeader';
+import { Table, Badge } from '../components/Table';
+import Button from '../components/Button';
+
+const STATUS_TONE = { scheduled:'info', active:'success', completed:'default', cancelled:'danger' };
 
 const empty = { lab_id:'', title:'', exam_date:'', start_time:'', end_time:'', auto_lock_threshold:40 };
 
@@ -40,129 +45,121 @@ export default function ExamSetup() {
     load();
   };
 
-  const STATUS_COLORS = {
-    scheduled: { bg:'#e0f2fe', color:'#0369a1' },
-    active:    { bg:'#dcfce7', color:'#16a34a' },
-    completed: { bg:'#f1f5f9', color:'#64748b' },
-    cancelled: { bg:'#fee2e2', color:'#dc2626' },
+  const counts = {
+    total:     sessions.length,
+    scheduled: sessions.filter(s=>s.status==='scheduled').length,
+    active:    sessions.filter(s=>s.status==='active').length,
+    completed: sessions.filter(s=>s.status==='completed').length,
   };
 
   return (
-    <div style={{padding:28}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-        <div>
-          <h1 style={{fontSize:24,fontWeight:700,color:'#1a1a2e',margin:0}}>Exam Monitor</h1>
-          <p style={{fontSize:13,color:'#888',marginTop:4}}>Create and manage proctored exam sessions</p>
-        </div>
-        <button onClick={()=>setModal(true)} style={btn('#667eea')}>+ Create exam session</button>
-      </div>
+    <div style={{ padding:'32px 36px', maxWidth:1180, fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif' }}>
+      <PageHeader
+        title="Exam monitor"
+        subtitle="Create and manage proctored exam sessions"
+        action={<Button onClick={()=>setModal(true)}>Create exam session</Button>}
+      />
+
+      <StatRow stats={[
+        { label:'Total',     value: counts.total },
+        { label:'Scheduled', value: counts.scheduled },
+        { label:'Active',    value: counts.active },
+        { label:'Completed', value: counts.completed },
+      ]} />
 
       {sessions.filter(s=>s.status==='active').map(s=>(
-        <div key={s.id} style={{background:'#fee2e2',border:'1.5px solid #fca5a5',borderRadius:10,padding:'14px 18px',marginBottom:16,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-          <div style={{display:'flex',alignItems:'center',gap:10}}>
-            <span style={{fontSize:20}}>🔴</span>
+        <div key={s.id} style={liveBanner}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <span style={{ width:9, height:9, borderRadius:'50%', background:'#dc2626', flexShrink:0 }} />
             <div>
-              <div style={{fontWeight:600,color:'#dc2626'}}>EXAM IN PROGRESS: {s.title}</div>
-              <div style={{fontSize:12,color:'#ef4444'}}>{s.lab_name} · Active</div>
+              <div style={{ fontWeight:700, color:'#b91c1c' }}>Exam in progress: {s.title}</div>
+              <div style={{ fontSize:12, color:'#dc2626' }}>{s.lab_name} · Active</div>
             </div>
           </div>
-          <div style={{display:'flex',gap:10}}>
-            <button onClick={()=>navigate(`/exam/war-room/${s.id}`)} style={btn('#dc2626')}>🎯 Open war room</button>
-            <button onClick={()=>endExam(s.id,s.title)} style={{...btn('#fff'),color:'#dc2626',border:'1.5px solid #dc2626'}}>End exam</button>
+          <div style={{ display:'flex', gap:10 }}>
+            <Button variant="danger" onClick={()=>navigate(`/exam/war-room/${s.id}`)} style={{ background:'linear-gradient(135deg,#dc2626,#ef4444)', color:'#fff', border:'none' }}>Open war room</Button>
+            <Button variant="secondary" onClick={()=>endExam(s.id,s.title)}>End exam</Button>
           </div>
         </div>
       ))}
 
-      <div style={{background:'#fff',borderRadius:12,boxShadow:'0 1px 4px rgba(0,0,0,0.06)',overflow:'hidden'}}>
-        <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
-          <thead>
-            <tr style={{background:'#f8fafc'}}>
-              {['Title','Lab','Date','Time','Status','Created by','Actions'].map(h=>(
-                <th key={h} style={{padding:'12px 14px',textAlign:'left',color:'#888',fontWeight:500,fontSize:12}}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={7} style={{padding:40,textAlign:'center',color:'#888'}}>Loading...</td></tr>
-            ) : sessions.length === 0 ? (
-              <tr><td colSpan={7} style={{padding:40,textAlign:'center',color:'#aaa'}}>No exam sessions yet</td></tr>
-            ) : sessions.map(s => (
-              <tr key={s.id} style={{borderTop:'1px solid #f0f0f0'}}>
-                <td style={{padding:'12px 14px',fontWeight:500,color:'#1a1a2e'}}>{s.title}</td>
-                <td style={{padding:'12px 14px',color:'#555'}}>{s.lab_name}</td>
-                <td style={{padding:'12px 14px',color:'#555'}}>{new Date(s.exam_date).toLocaleDateString('en-IN')}</td>
-                <td style={{padding:'12px 14px',color:'#555',fontSize:12}}>{s.start_time} – {s.end_time}</td>
-                <td style={{padding:'12px 14px'}}>
-                  <span style={{padding:'3px 10px',borderRadius:20,fontSize:11,fontWeight:500,...(STATUS_COLORS[s.status]||{})}}>
-                    {s.status}
-                  </span>
-                </td>
-                <td style={{padding:'12px 14px',color:'#555'}}>{s.created_by_name}</td>
-                <td style={{padding:'12px 14px'}}>
-                  <div style={{display:'flex',gap:6}}>
-                    {s.status==='scheduled' && (
-                      <button onClick={()=>startExam(s.id,s.title)} style={smallBtn('#16a34a')}>▶ Start</button>
-                    )}
+      <Panel>
+        {loading ? (
+          <div style={{ padding:40, textAlign:'center', color:'#bbb', fontSize:13 }}>Loading</div>
+        ) : (
+          <Table
+            columns={['Title','Lab','Date','Time','Status','Created by','']}
+            rows={sessions}
+            emptyTitle="No exam sessions yet"
+            emptySubtitle="Create a session to begin proctoring."
+            renderRow={s => (
+              <tr key={s.id}>
+                <td style={td}><span style={{ fontWeight:500 }}>{s.title}</span></td>
+                <td style={{ ...td, color:'#999' }}>{s.lab_name}</td>
+                <td style={{ ...td, color:'#999' }}>{new Date(s.exam_date).toLocaleDateString('en-IN')}</td>
+                <td style={{ ...td, color:'#999', fontSize:12 }}>{s.start_time} – {s.end_time}</td>
+                <td style={td}><Badge tone={STATUS_TONE[s.status]}>{s.status}</Badge></td>
+                <td style={{ ...td, color:'#999' }}>{s.created_by_name}</td>
+                <td style={td}>
+                  <div style={{ display:'flex', gap:6, justifyContent:'flex-end' }}>
+                    {s.status==='scheduled' && <Button onClick={()=>startExam(s.id,s.title)} style={{ padding:'5px 12px', fontSize:12 }}>Start</Button>}
                     {s.status==='active' && (
                       <>
-                        <button onClick={()=>navigate(`/exam/war-room/${s.id}`)} style={smallBtn('#dc2626')}>War room</button>
-                        <button onClick={()=>endExam(s.id,s.title)} style={smallBtn('#64748b')}>End</button>
+                        <Button variant="danger" onClick={()=>navigate(`/exam/war-room/${s.id}`)} style={{ padding:'5px 12px', fontSize:12 }}>War room</Button>
+                        <Button variant="secondary" onClick={()=>endExam(s.id,s.title)} style={{ padding:'5px 12px', fontSize:12 }}>End</Button>
                       </>
                     )}
-                    {s.status==='completed' && (
-                      <button onClick={()=>navigate(`/exam/war-room/${s.id}`)} style={smallBtn('#64748b')}>View report</button>
-                    )}
+                    {s.status==='completed' && <Button variant="secondary" onClick={()=>navigate(`/exam/war-room/${s.id}`)} style={{ padding:'5px 12px', fontSize:12 }}>View report</Button>}
                   </div>
                 </td>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            )}
+          />
+        )}
+      </Panel>
 
       {modal && (
         <div style={overlay}>
           <div style={modalBox}>
-            <div style={{display:'flex',justifyContent:'space-between',marginBottom:20}}>
-              <h2 style={{fontSize:17,fontWeight:600,margin:0}}>Create exam session</h2>
-              <button onClick={()=>setModal(false)} style={{background:'none',border:'none',fontSize:20,cursor:'pointer'}}>×</button>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:20 }}>
+              <h2 style={{ fontSize:16, fontWeight:600, margin:0, color:'#1a1a2e' }}>Create exam session</h2>
+              <button onClick={()=>setModal(false)} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'#bbb' }}>×</button>
             </div>
-            <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
               <div>
-                <label style={lbl}>Exam title *</label>
-                <input type="text" value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder="e.g. MCA Semester Exam — Python" style={inp}/>
+                <label style={labelStyle}>Exam title</label>
+                <input type="text" value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder="e.g. MCA Semester Exam — Python" style={inputStyle}/>
               </div>
               <div>
-                <label style={lbl}>Lab *</label>
-                <select value={form.lab_id} onChange={e=>setForm({...form,lab_id:e.target.value})} style={sel}>
+                <label style={labelStyle}>Lab</label>
+                <select value={form.lab_id} onChange={e=>setForm({...form,lab_id:e.target.value})} style={selectStyle}>
                   <option value="">Select lab</option>
                   {labs.map(l=><option key={l.id} value={l.id}>{l.name}</option>)}
                 </select>
               </div>
               <div>
-                <label style={lbl}>Exam date *</label>
-                <input type="date" value={form.exam_date} onChange={e=>setForm({...form,exam_date:e.target.value})} style={inp}/>
+                <label style={labelStyle}>Exam date</label>
+                <input type="date" value={form.exam_date} onChange={e=>setForm({...form,exam_date:e.target.value})} style={inputStyle}/>
               </div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
                 <div>
-                  <label style={lbl}>Start time</label>
-                  <input type="time" value={form.start_time} onChange={e=>setForm({...form,start_time:e.target.value})} style={inp}/>
+                  <label style={labelStyle}>Start time</label>
+                  <input type="time" value={form.start_time} onChange={e=>setForm({...form,start_time:e.target.value})} style={inputStyle}/>
                 </div>
                 <div>
-                  <label style={lbl}>End time</label>
-                  <input type="time" value={form.end_time} onChange={e=>setForm({...form,end_time:e.target.value})} style={inp}/>
+                  <label style={labelStyle}>End time</label>
+                  <input type="time" value={form.end_time} onChange={e=>setForm({...form,end_time:e.target.value})} style={inputStyle}/>
                 </div>
               </div>
               <div>
-                <label style={lbl}>Auto-lock threshold (trust score)</label>
-                <input type="number" min={0} max={100} value={form.auto_lock_threshold} onChange={e=>setForm({...form,auto_lock_threshold:e.target.value})} style={inp}/>
-                <div style={{fontSize:11,color:'#888',marginTop:4}}>Machine locks when trust score drops below this (default: 40)</div>
+                <label style={labelStyle}>Auto-lock threshold</label>
+                <input type="number" min={0} max={100} value={form.auto_lock_threshold} onChange={e=>setForm({...form,auto_lock_threshold:e.target.value})} style={inputStyle}/>
+                <div style={{ fontSize:11, color:'#a8a8b8', marginTop:4 }}>Machine locks when trust score drops below this (default: 40)</div>
               </div>
             </div>
-            <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:20}}>
-              <button onClick={()=>setModal(false)} style={smallBtn('#888')}>Cancel</button>
-              <button onClick={save} style={btn('#667eea')}>Create session</button>
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:10, marginTop:20 }}>
+              <Button variant="secondary" onClick={()=>setModal(false)}>Cancel</Button>
+              <Button onClick={save}>Create session</Button>
             </div>
           </div>
         </div>
@@ -171,10 +168,10 @@ export default function ExamSetup() {
   );
 }
 
-const btn      = c => ({padding:'9px 18px',background:c,color:'#fff',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500});
-const smallBtn = c => ({padding:'5px 12px',background:`${c}22`,color:c,border:`1px solid ${c}`,borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:500});
-const inp      = {padding:'8px 12px',border:'1.5px solid #e0e0e0',borderRadius:8,fontSize:13,width:'100%',boxSizing:'border-box'};
-const sel      = {padding:'8px 12px',border:'1.5px solid #e0e0e0',borderRadius:8,fontSize:13,width:'100%',boxSizing:'border-box',background:'#fff'};
-const lbl      = {fontSize:11,fontWeight:500,color:'#555',display:'block',marginBottom:4};
-const overlay  = {position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000};
-const modalBox = {background:'#fff',borderRadius:14,padding:28,width:500,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 8px 32px rgba(0,0,0,0.15)'};
+const td         = { padding:'12px 10px', color:'#1a1a2e', borderBottom:'1px solid #f5f5f7' };
+const liveBanner = { background:'#fde9e9', border:'1px solid #f8caca', borderRadius:12, padding:'14px 18px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:10 };
+const inputStyle = { padding:'8px 12px', border:'1px solid #ececf0', borderRadius:8, fontSize:13, width:'100%', boxSizing:'border-box', outline:'none' };
+const selectStyle= { padding:'8px 12px', border:'1px solid #ececf0', borderRadius:8, fontSize:13, width:'100%', boxSizing:'border-box', background:'#fff', outline:'none' };
+const labelStyle = { fontSize:11, fontWeight:500, color:'#888', display:'block', marginBottom:4 };
+const overlay    = { position:'fixed', inset:0, background:'rgba(26,26,46,0.4)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 };
+const modalBox   = { background:'#fff', borderRadius:12, padding:28, width:500, maxHeight:'90vh', overflowY:'auto', boxShadow:'0 8px 32px rgba(0,0,0,0.12)' };

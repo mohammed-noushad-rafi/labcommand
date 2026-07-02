@@ -4,6 +4,14 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import api from '../api/axios';
 import { io } from 'socket.io-client';
 
+const STATUS_TONE = {
+  online:    { color:'#0f9d58', bg:'#eefbf3' },
+  offline:   { color:'#7c7c8a', bg:'#f1f1f6' },
+  locked:    { color:'#d97706', bg:'#fef3e2' },
+  exam:      { color:'#dc2626', bg:'#fde9e9' },
+  classroom: { color:'#7c3aed', bg:'#f1ebfe' },
+};
+
 export default function MachineDetail() {
   const { id }   = useParams();
   const navigate = useNavigate();
@@ -58,120 +66,125 @@ export default function MachineDetail() {
     setMsg('');
   };
 
-  if (loading) return <div style={{padding:40,textAlign:'center',color:'#888'}}>Loading...</div>;
-  if (!machine) return <div style={{padding:40,textAlign:'center',color:'#888'}}>Machine not found</div>;
+  if (loading) return <div style={s.loading}>Loading</div>;
+  if (!machine) return <div style={s.loading}>Machine not found</div>;
 
   const isOnline = machine.status === 'online';
-  const statusColors = { online:'#22c55e', offline:'#94a3b8', locked:'#eab308', exam:'#ef4444', classroom:'#8b5cf6' };
-  const statusColor  = statusColors[machine.status] || '#94a3b8';
+  const tone = STATUS_TONE[machine.status] || STATUS_TONE.offline;
 
   const Gauge = ({ label, value, color }) => (
-    <div style={{flex:1,background:'#f8fafc',borderRadius:10,padding:'16px 12px',textAlign:'center',minWidth:100}}>
-      <div style={{fontSize:11,color:'#888',marginBottom:8}}>{label}</div>
-      <div style={{position:'relative',height:8,background:'#e2e8f0',borderRadius:4,marginBottom:8}}>
-        <div style={{position:'absolute',top:0,left:0,height:8,borderRadius:4,background:color,width:`${Math.min(value||0,100)}%`,transition:'width .5s'}}></div>
+    <div style={s.gauge}>
+      <div style={s.gaugeLabel}>{label}</div>
+      <div style={s.gaugeTrack}>
+        <div style={{ ...s.gaugeFill, background:color, width:`${Math.min(value||0,100)}%` }} />
       </div>
-      <div style={{fontSize:22,fontWeight:700,color}}>{value != null ? `${Math.round(value)}%` : '—'}</div>
+      <div style={{ ...s.gaugeValue, color }}>{value != null ? `${Math.round(value)}%` : '—'}</div>
     </div>
   );
 
   return (
-    <div style={{padding:28,maxWidth:1100}}>
-      {/* Header */}
-      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:24}}>
-        <button onClick={() => navigate('/lab-map')} style={{background:'none',border:'1px solid #e0e0e0',borderRadius:8,padding:'6px 12px',cursor:'pointer',fontSize:13,color:'#555'}}>← Back</button>
-        <div style={{flex:1}}>
-          <div style={{display:'flex',alignItems:'center',gap:10}}>
-            <h1 style={{fontSize:22,fontWeight:700,color:'#1a1a2e',margin:0}}>{machine.hostname}</h1>
-            <span style={{padding:'3px 10px',borderRadius:20,fontSize:11,fontWeight:500,background:statusColor+'22',color:statusColor,border:`1px solid ${statusColor}`}}>
+    <div style={s.page}>
+      <div style={s.accentBar} />
+      <div style={s.headerRow}>
+        <button onClick={() => navigate('/lab-map')} style={s.backBtn}>← Back</button>
+        <div style={{ flex:1 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <h1 style={s.title}>{machine.hostname}</h1>
+            <span style={{ padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:tone.bg, color:tone.color }}>
               {machine.status}
             </span>
           </div>
-          <div style={{fontSize:12,color:'#888',marginTop:3}}>{machine.ip_address} · {machine.lab_name} · {machine.os_info}</div>
+          <div style={s.sub}>{machine.ip_address} · {machine.lab_name} · {machine.os_info}</div>
         </div>
       </div>
 
-      {/* Live gauges */}
-      <div style={{background:'#fff',borderRadius:12,padding:20,marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
-        <h3 style={{fontSize:14,fontWeight:600,color:'#1a1a2e',marginBottom:14}}>Live metrics</h3>
-        <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
-          <Gauge label="CPU"  value={machine.cpu_percent}  color={machine.cpu_percent>80?'#ef4444':machine.cpu_percent>60?'#f59e0b':'#22c55e'}/>
-          <Gauge label="RAM"  value={machine.ram_percent}  color={machine.ram_percent>80?'#ef4444':machine.ram_percent>60?'#f59e0b':'#3b82f6'}/>
-          <Gauge label="Disk" value={machine.disk_percent} color={machine.disk_percent>90?'#ef4444':machine.disk_percent>70?'#f59e0b':'#8b5cf6'}/>
+      <div style={s.panel}>
+        <h3 style={s.panelTitle}>Live metrics</h3>
+        <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
+          <Gauge label="CPU"  value={machine.cpu_percent}  color={machine.cpu_percent>80?'#dc2626':machine.cpu_percent>60?'#d97706':'#0f9d58'}/>
+          <Gauge label="RAM"  value={machine.ram_percent}  color={machine.ram_percent>80?'#dc2626':machine.ram_percent>60?'#d97706':'#4f46e5'}/>
+          <Gauge label="Disk" value={machine.disk_percent} color={machine.disk_percent>90?'#dc2626':machine.disk_percent>70?'#d97706':'#7c3aed'}/>
         </div>
       </div>
 
-      {/* Sparkline */}
       {telemetry.length > 0 && (
-        <div style={{background:'#fff',borderRadius:12,padding:20,marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
-          <h3 style={{fontSize:14,fontWeight:600,color:'#1a1a2e',marginBottom:14}}>CPU history (last hour)</h3>
+        <div style={s.panel}>
+          <h3 style={s.panelTitle}>CPU history — last hour</h3>
           <ResponsiveContainer width="100%" height={140}>
             <LineChart data={telemetry}>
               <XAxis dataKey="recorded_at" hide />
-              <YAxis domain={[0,100]} tickFormatter={v=>`${v}%`} width={40} style={{fontSize:11}}/>
+              <YAxis domain={[0,100]} tickFormatter={v=>`${v}%`} width={40} tick={{fontSize:11, fill:'#a8a8b8'}} axisLine={false} tickLine={false}/>
               <Tooltip formatter={v=>`${Math.round(v)}%`} labelFormatter={()=>'CPU'}/>
-              <Line type="monotone" dataKey="cpu_percent" stroke="#667eea" strokeWidth={2} dot={false}/>
+              <Line type="monotone" dataKey="cpu_percent" stroke="#4f46e5" strokeWidth={2.5} dot={false}/>
             </LineChart>
           </ResponsiveContainer>
         </div>
       )}
 
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}}>
-        {/* Actions */}
-        <div style={{background:'#fff',borderRadius:12,padding:20,boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
-          <h3 style={{fontSize:14,fontWeight:600,color:'#1a1a2e',marginBottom:14}}>Remote actions</h3>
-          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+      <div style={s.grid2}>
+        <div style={s.panel}>
+          <h3 style={s.panelTitle}>Remote actions</h3>
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
             {[
-              { label:'🔒 Lock screen',  type:'lock',    color:'#f59e0b' },
-              { label:'🔄 Restart',      type:'restart', color:'#3b82f6' },
-              { label:'⏻ Shutdown',      type:'shutdown',color:'#ef4444' },
+              { label:'Lock screen', type:'lock',     color:'#d97706', bg:'#fef3e2' },
+              { label:'Restart',     type:'restart',  color:'#2563eb', bg:'#e8f0fe' },
+              { label:'Shutdown',    type:'shutdown', color:'#dc2626', bg:'#fde9e9' },
             ].map(a => (
               <button key={a.type} disabled={!isOnline || sending}
                 onClick={() => { if(window.confirm(`Send ${a.type} to ${machine.hostname}?`)) sendCommand(a.type); }}
-                style={{padding:'9px 14px',border:`1.5px solid ${a.color}`,borderRadius:8,background:`${a.color}11`,color:a.color,cursor:isOnline?'pointer':'not-allowed',fontSize:13,fontWeight:500,opacity:isOnline?1:0.4,textAlign:'left'}}>
+                style={{
+                  padding:'10px 14px', border:'none', borderRadius:9, background:a.bg, color:a.color,
+                  cursor: isOnline ? 'pointer' : 'not-allowed', fontSize:13, fontWeight:600,
+                  opacity: isOnline ? 1 : 0.45, textAlign:'left',
+                }}>
                 {a.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Send message */}
-        <div style={{background:'#fff',borderRadius:12,padding:20,boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
-          <h3 style={{fontSize:14,fontWeight:600,color:'#1a1a2e',marginBottom:14}}>Send message</h3>
+        <div style={s.panel}>
+          <h3 style={s.panelTitle}>Send message</h3>
           <textarea
             value={msg}
             onChange={e=>setMsg(e.target.value)}
-            placeholder="Type a message to display on this machine..."
-            style={{width:'100%',height:80,padding:10,border:'1.5px solid #e0e0e0',borderRadius:8,fontSize:13,resize:'none',outline:'none',boxSizing:'border-box'}}
+            placeholder="Type a message to display on this machine"
+            style={s.textarea}
           />
-          <button onClick={sendMessage} disabled={!isOnline||!msg.trim()||sending}
-            style={{marginTop:8,width:'100%',padding:'9px',background:'#667eea',color:'#fff',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,opacity:(isOnline&&msg.trim())?1:0.4}}>
-            📨 Send message
+          <button onClick={sendMessage} disabled={!isOnline||!msg.trim()||sending} style={{
+            marginTop:10, width:'100%', padding:'10px', fontSize:13, fontWeight:600,
+            background:'linear-gradient(135deg,#4f46e5,#7c3aed)', color:'#fff', border:'none', borderRadius:9,
+            cursor: (isOnline&&msg.trim()) ? 'pointer' : 'default',
+            opacity: (isOnline&&msg.trim()) ? 1 : 0.4,
+            boxShadow: (isOnline&&msg.trim()) ? '0 4px 14px rgba(79,70,229,0.3)' : 'none',
+          }}>
+            Send message
           </button>
         </div>
       </div>
 
-      {/* Process list */}
-      <div style={{background:'#fff',borderRadius:12,padding:20,boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
-        <h3 style={{fontSize:14,fontWeight:600,color:'#1a1a2e',marginBottom:14}}>Running processes {processes.length > 0 && <span style={{color:'#888',fontWeight:400}}>({processes.length})</span>}</h3>
+      <div style={s.panel}>
+        <h3 style={s.panelTitle}>
+          Running processes {processes.length > 0 && <span style={{ color:'#a8a8b8', fontWeight:400 }}>({processes.length})</span>}
+        </h3>
         {processes.length ? (
-          <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+          <table style={s.table}>
             <thead>
-              <tr>{['Process','PID','CPU %','Memory (MB)'].map(h=><th key={h} style={{textAlign:'left',padding:'6px 10px',color:'#888',fontWeight:500,borderBottom:'1px solid #f0f0f0',fontSize:12}}>{h}</th>)}</tr>
+              <tr>{['Process','PID','CPU %','Memory (MB)'].map(h=><th key={h} style={s.th}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {processes.map((p,i)=>(
-                <tr key={i} style={{background:i%2?'#fafafa':'#fff'}}>
-                  <td style={{padding:'7px 10px',color:'#333'}}>{p.process_name}</td>
-                  <td style={{padding:'7px 10px',color:'#888'}}>{p.pid}</td>
-                  <td style={{padding:'7px 10px',color: p.cpu_percent>50?'#ef4444':'#333'}}>{p.cpu_percent?.toFixed(1)}%</td>
-                  <td style={{padding:'7px 10px',color:'#333'}}>{p.mem_mb?.toFixed(0)}</td>
+                <tr key={i}>
+                  <td style={s.td}>{p.process_name}</td>
+                  <td style={{ ...s.td, color:'#9494a3' }}>{p.pid}</td>
+                  <td style={{ ...s.td, color: p.cpu_percent>50?'#dc2626':'#16161f', fontWeight: p.cpu_percent>50?700:400 }}>{p.cpu_percent?.toFixed(1)}%</td>
+                  <td style={s.td}>{p.mem_mb?.toFixed(0)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         ) : (
-          <div style={{color:'#aaa',fontSize:13,padding:'20px 0',textAlign:'center'}}>
+          <div style={s.emptyState}>
             {isOnline ? 'No process data yet' : 'Machine is offline — no process data available'}
           </div>
         )}
@@ -179,3 +192,26 @@ export default function MachineDetail() {
     </div>
   );
 }
+
+const s = {
+  page:        { padding:'32px 36px', maxWidth:1100, fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif' },
+  loading:     { padding:60, textAlign:'center', color:'#b4b4c0', fontSize:13 },
+  accentBar:   { height:3, width:64, borderRadius:2, background:'linear-gradient(90deg,#4f46e5,#7c3aed)', marginBottom:16 },
+  headerRow:   { display:'flex', alignItems:'center', gap:12, marginBottom:24, borderBottom:'1px solid #e9e9f0', paddingBottom:20 },
+  backBtn:     { background:'#fff', border:'1px solid #e9e9f0', borderRadius:8, padding:'7px 14px', cursor:'pointer', fontSize:13, color:'#5a5a6c', fontWeight:500 },
+  title:       { fontSize:21, fontWeight:700, color:'#16161f', margin:0 },
+  sub:         { fontSize:12, color:'#a8a8b8', marginTop:3 },
+  panel:       { background:'#fff', border:'1px solid #e9e9f0', borderRadius:14, padding:'20px 22px', marginBottom:16, boxShadow:'0 1px 3px rgba(16,16,30,0.04)' },
+  panelTitle:  { fontSize:13.5, fontWeight:700, color:'#16161f', marginBottom:14 },
+  gauge:       { flex:1, background:'#fafafd', borderRadius:12, padding:'16px 12px', textAlign:'center', minWidth:100 },
+  gaugeLabel:  { fontSize:11, color:'#7c7c8a', marginBottom:8, fontWeight:600 },
+  gaugeTrack:  { position:'relative', height:7, background:'#ececf2', borderRadius:4, marginBottom:8 },
+  gaugeFill:   { position:'absolute', top:0, left:0, height:7, borderRadius:4, transition:'width .5s' },
+  gaugeValue:  { fontSize:21, fontWeight:800 },
+  grid2:       { display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 },
+  textarea:    { width:'100%', height:80, padding:11, border:'1px solid #e9e9f0', borderRadius:9, fontSize:13, resize:'none', outline:'none', boxSizing:'border-box', fontFamily:'inherit' },
+  table:       { width:'100%', borderCollapse:'collapse', fontSize:13 },
+  th:          { textAlign:'left', padding:'10px 10px', color:'#a8a8b8', fontWeight:700, fontSize:10.5, textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'2px solid #f0f0f6', background:'#fafafd' },
+  td:          { padding:'11px 10px', color:'#16161f', borderBottom:'1px solid #f0f0f6' },
+  emptyState:  { color:'#a8a8b8', fontSize:13, padding:'24px 0', textAlign:'center' },
+};

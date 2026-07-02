@@ -1,6 +1,16 @@
 import { useEffect, useState, useRef } from 'react';
 import { io } from 'socket.io-client';
 import api from '../api/axios';
+import PageHeader, { Panel } from '../components/PageHeader';
+import Button from '../components/Button';
+
+const STATUS_COLOR = {
+  online:    { dot:'#0f9d58', label:'Online' },
+  offline:   { dot:'#a8a8b8', label:'Offline' },
+  classroom: { dot:'#7c3aed', label:'Locked' },
+  locked:    { dot:'#d97706', label:'Locked' },
+  exam:      { dot:'#dc2626', label:'Exam' },
+};
 
 export default function Classroom() {
   const [labs,        setLabs]        = useState([]);
@@ -28,7 +38,6 @@ export default function Classroom() {
   }, []);
 
   const labMachines = machines.filter(m => m.lab_id === parseInt(selectedLab));
-
   const addLog = (msg) => setLog(prev => [`${new Date().toLocaleTimeString('en-IN')} — ${msg}`, ...prev.slice(0,19)]);
 
   const startSession = async () => {
@@ -56,142 +65,106 @@ export default function Classroom() {
     if (!broadcastMsg.trim()) return;
     try {
       const r = await api.post('/classroom/broadcast', { lab_id: selectedLab, message: broadcastMsg });
-      addLog(`Message broadcast to ${r.data.sent} machines: "${broadcastMsg}"`);
+      addLog(`Broadcast to ${r.data.sent} machines: "${broadcastMsg}"`);
       setBroadcastMsg('');
     } catch (err) { alert(err.response?.data?.message || 'Error'); }
   };
 
-  const STATUS_COLORS = {
-    online:    '#22c55e',
-    offline:   '#94a3b8',
-    classroom: '#8b5cf6',
-    locked:    '#f59e0b',
-    exam:      '#ef4444',
-  };
-
   return (
-    <div style={{padding:28}}>
-      <div style={{marginBottom:20}}>
-        <h1 style={{fontSize:24,fontWeight:700,color:'#1a1a2e',margin:0}}>Classroom Mode</h1>
-        <p style={{fontSize:13,color:'#888',marginTop:4}}>Lock machines, broadcast messages, and manage class sessions</p>
-      </div>
+    <div style={{ padding:'32px 36px', maxWidth:1180, fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif' }}>
+      <PageHeader title="Classroom mode" subtitle="Lock machines, broadcast messages, and manage class sessions" />
 
-      {/* Active session banner */}
       {active && (
-        <div style={{background:'#ede9fe',border:'1.5px solid #c4b5fd',borderRadius:10,padding:'14px 18px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-          <div style={{display:'flex',alignItems:'center',gap:10}}>
-            <div style={{width:10,height:10,borderRadius:'50%',background:'#8b5cf6',animation:'pulse 1s infinite'}}></div>
+        <div style={activeBanner}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <span style={pulseDot} />
             <div>
-              <div style={{fontWeight:600,color:'#5b21b6'}}>Class in session: {sessionName}</div>
-              <div style={{fontSize:12,color:'#7c3aed'}}>{labMachines.length} machines locked</div>
+              <div style={{ fontWeight:700, color:'#5b21b6' }}>Class in session: {sessionName}</div>
+              <div style={{ fontSize:12, color:'#7c3aed' }}>{labMachines.length} machines locked</div>
             </div>
           </div>
-          <button onClick={endSession} disabled={loading} style={{padding:'8px 18px',background:'#7c3aed',color:'#fff',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500}}>
-            ⏹ End session
-          </button>
+          <Button onClick={endSession} disabled={loading} style={{ background:'linear-gradient(135deg,#7c3aed,#9333ea)', border:'none', color:'#fff' }}>
+            {loading ? 'Ending...' : 'End session'}
+          </Button>
         </div>
       )}
 
-      <div style={{display:'grid',gridTemplateColumns:'340px 1fr',gap:20}}>
-        {/* Control panel */}
-        <div style={{display:'flex',flexDirection:'column',gap:14}}>
-
-          {/* Session setup */}
-          <div style={{background:'#fff',borderRadius:12,padding:'20px',boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
-            <h3 style={{fontSize:14,fontWeight:600,color:'#1a1a2e',marginBottom:14}}>Session setup</h3>
-            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+      <div style={{ display:'grid', gridTemplateColumns:'320px 1fr', gap:20 }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+          <Panel title="Session setup">
+            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               <div>
-                <label style={lbl}>Select lab</label>
-                <select value={selectedLab} onChange={e=>setSelectedLab(e.target.value)} style={sel} disabled={active}>
+                <label style={labelStyle}>Select lab</label>
+                <select value={selectedLab} onChange={e=>setSelectedLab(e.target.value)} style={selectStyle} disabled={active}>
                   <option value="">Choose a lab</option>
                   {labs.map(l=><option key={l.id} value={l.id}>{l.name}</option>)}
                 </select>
               </div>
               <div>
-                <label style={lbl}>Session name</label>
-                <input type="text" value={sessionName} onChange={e=>setSessionName(e.target.value)} placeholder="e.g. Python Lab — Batch A" style={inp} disabled={active}/>
+                <label style={labelStyle}>Session name</label>
+                <input type="text" value={sessionName} onChange={e=>setSessionName(e.target.value)} placeholder="e.g. Python Lab — Batch A" style={inputStyle} disabled={active}/>
               </div>
               {!active ? (
-                <button onClick={startSession} disabled={loading||!selectedLab||!sessionName} style={{...btn('#8b5cf6'),opacity:(!selectedLab||!sessionName)?0.4:1}}>
-                  {loading ? 'Starting...' : '🔒 Start classroom session'}
-                </button>
+                <Button onClick={startSession} disabled={loading||!selectedLab||!sessionName} style={{ width:'100%', opacity:(!selectedLab||!sessionName)?0.4:1 }}>
+                  {loading ? 'Starting...' : 'Start classroom session'}
+                </Button>
               ) : (
-                <button onClick={endSession} disabled={loading} style={btn('#ef4444')}>
-                  {loading ? 'Ending...' : '🔓 End session and unlock all'}
-                </button>
+                <Button variant="danger" onClick={endSession} disabled={loading} style={{ width:'100%', background:'linear-gradient(135deg,#dc2626,#ef4444)', border:'none', color:'#fff' }}>
+                  {loading ? 'Ending...' : 'End session and unlock all'}
+                </Button>
               )}
             </div>
-          </div>
+          </Panel>
 
-          {/* Broadcast */}
-          <div style={{background:'#fff',borderRadius:12,padding:'20px',boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
-            <h3 style={{fontSize:14,fontWeight:600,color:'#1a1a2e',marginBottom:14}}>Broadcast message</h3>
-            <textarea
-              value={broadcastMsg}
-              onChange={e=>setBroadcastMsg(e.target.value)}
-              placeholder="Type a message to send to all machines in the lab..."
-              rows={3}
-              style={{...inp,resize:'vertical',marginBottom:10}}
-            />
-            <button onClick={broadcast} disabled={!broadcastMsg.trim()||!selectedLab} style={{...btn('#3b82f6'),opacity:(!broadcastMsg.trim()||!selectedLab)?0.4:1,width:'100%'}}>
-              📢 Broadcast to all machines
-            </button>
-          </div>
+          <Panel title="Broadcast message">
+            <textarea value={broadcastMsg} onChange={e=>setBroadcastMsg(e.target.value)} placeholder="Type a message to send to all machines in the lab" rows={3} style={{ ...inputStyle, resize:'vertical', marginBottom:10 }}/>
+            <Button onClick={broadcast} disabled={!broadcastMsg.trim()||!selectedLab} style={{ width:'100%', opacity:(!broadcastMsg.trim()||!selectedLab)?0.4:1 }}>
+              Broadcast to all machines
+            </Button>
+          </Panel>
 
-          {/* Activity log */}
-          <div style={{background:'#fff',borderRadius:12,padding:'20px',boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
-            <h3 style={{fontSize:14,fontWeight:600,color:'#1a1a2e',marginBottom:10}}>Activity log</h3>
-            <div style={{maxHeight:200,overflowY:'auto'}}>
+          <Panel title="Activity log">
+            <div style={{ maxHeight:180, overflowY:'auto' }}>
               {log.length === 0 ? (
-                <div style={{fontSize:12,color:'#aaa',textAlign:'center',padding:'20px 0'}}>No activity yet</div>
-              ) : log.map((entry,i) => (
-                <div key={i} style={{fontSize:11,color:'#555',padding:'4px 0',borderBottom:'1px solid #f5f5f5'}}>
-                  {entry}
-                </div>
+                <div style={{ fontSize:12, color:'#a8a8b8', textAlign:'center', padding:'20px 0' }}>No activity yet</div>
+              ) : log.map((entry, i) => (
+                <div key={i} style={{ fontSize:11, color:'#7c7c8a', padding:'5px 0', borderBottom:'1px solid #f5f5f7' }}>{entry}</div>
               ))}
             </div>
-          </div>
+          </Panel>
         </div>
 
-        {/* Machine grid */}
         <div>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-            <h3 style={{fontSize:14,fontWeight:600,color:'#1a1a2e'}}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+            <h3 style={{ fontSize:14, fontWeight:700, color:'#16161f' }}>
               {selectedLab ? `Machines in ${labs.find(l=>l.id===parseInt(selectedLab))?.name||'lab'}` : 'Select a lab to see machines'}
             </h3>
-            {selectedLab && (
-              <div style={{fontSize:12,color:'#888'}}>
-                {labMachines.filter(m=>m.status==='online'||m.status==='classroom').length} active
-              </div>
-            )}
+            {selectedLab && <span style={{ fontSize:12, color:'#7c7c8a' }}>{labMachines.filter(m=>m.status==='online'||m.status==='classroom').length} active</span>}
           </div>
 
           {!selectedLab ? (
-            <div style={{background:'#fff',borderRadius:12,padding:60,textAlign:'center',boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
-              <div style={{fontSize:32,marginBottom:10}}>📋</div>
-              <div style={{color:'#aaa',fontSize:13}}>Select a lab from the panel to see its machines</div>
-            </div>
+            <Panel>
+              <div style={{ padding:'40px 0', textAlign:'center', color:'#a8a8b8', fontSize:13 }}>Select a lab from the panel to see its machines</div>
+            </Panel>
           ) : (
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:10}}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))', gap:10 }}>
               {labMachines.map(m => {
-                const color  = STATUS_COLORS[m.status] || '#94a3b8';
+                const st = STATUS_COLOR[m.status] || STATUS_COLOR.offline;
                 const locked = m.status === 'classroom' || m.status === 'locked';
                 return (
-                  <div key={m.id} style={{background:'#fff',border:`1.5px solid ${color}33`,borderRadius:10,padding:'14px 12px',boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
-                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
-                      <div style={{width:8,height:8,borderRadius:'50%',background:color,flexShrink:0}}></div>
-                      <span style={{fontSize:12,fontWeight:600,color:'#1a1a2e',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.hostname}</span>
+                  <div key={m.id} style={{ background:'#fff', border:`1.5px solid ${locked?'#e9d5ff':m.status==='online'?'#bce8cc':'#e9e9f0'}`, borderRadius:12, padding:'14px 12px', boxShadow:'0 1px 3px rgba(16,16,30,0.04)' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:7 }}>
+                      <span style={{ width:7, height:7, borderRadius:'50%', background:st.dot, flexShrink:0 }} />
+                      <span style={{ fontSize:12.5, fontWeight:700, color:'#16161f', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{m.hostname}</span>
                     </div>
-                    <div style={{fontSize:10,color:'#888',marginBottom:6}}>{m.ip_address}</div>
-                    <div style={{fontSize:11,fontWeight:500,color}}>
-                      {locked ? '🔒 Locked' : m.status === 'online' ? '✅ Online' : '⚫ Offline'}
-                    </div>
+                    <div style={{ fontSize:10.5, color:'#a8a8b8', marginBottom:7 }}>{m.ip_address}</div>
+                    <div style={{ fontSize:11, fontWeight:600, color:st.dot }}>{locked ? 'Locked' : st.label}</div>
                     {m.cpu_percent != null && m.status === 'online' && (
-                      <div style={{marginTop:6}}>
-                        <div style={{height:3,background:'#f0f0f0',borderRadius:2}}>
-                          <div style={{height:3,borderRadius:2,background:'#667eea',width:`${Math.min(m.cpu_percent,100)}%`}}></div>
+                      <div style={{ marginTop:7 }}>
+                        <div style={{ height:3, background:'#f0f0f6', borderRadius:2 }}>
+                          <div style={{ height:3, borderRadius:2, background:'#4f46e5', width:`${Math.min(m.cpu_percent,100)}%` }} />
                         </div>
-                        <div style={{fontSize:9,color:'#aaa',marginTop:2}}>CPU {Math.round(m.cpu_percent)}%</div>
+                        <div style={{ fontSize:9.5, color:'#a8a8b8', marginTop:2 }}>CPU {Math.round(m.cpu_percent)}%</div>
                       </div>
                     )}
                   </div>
@@ -206,7 +179,8 @@ export default function Classroom() {
   );
 }
 
-const btn = c => ({padding:'10px',background:c,color:'#fff',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,width:'100%'});
-const inp = {padding:'8px 12px',border:'1.5px solid #e0e0e0',borderRadius:8,fontSize:13,width:'100%',boxSizing:'border-box'};
-const sel = {padding:'8px 12px',border:'1.5px solid #e0e0e0',borderRadius:8,fontSize:13,width:'100%',boxSizing:'border-box',background:'#fff'};
-const lbl = {fontSize:11,fontWeight:500,color:'#555',display:'block',marginBottom:4};
+const activeBanner = { background:'#f6f1fe', border:'1px solid #dccdfb', borderRadius:12, padding:'14px 18px', marginBottom:20, display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10 };
+const pulseDot     = { display:'inline-block', width:9, height:9, borderRadius:'50%', background:'#7c3aed', animation:'pulse 1.2s infinite' };
+const inputStyle   = { padding:'8px 12px', border:'1px solid #e9e9f0', borderRadius:8, fontSize:13, width:'100%', boxSizing:'border-box', outline:'none', fontFamily:'inherit' };
+const selectStyle  = { padding:'8px 12px', border:'1px solid #e9e9f0', borderRadius:8, fontSize:13, width:'100%', boxSizing:'border-box', background:'#fff', outline:'none' };
+const labelStyle   = { fontSize:11, fontWeight:500, color:'#888', display:'block', marginBottom:4 };
