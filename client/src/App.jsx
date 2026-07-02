@@ -57,7 +57,7 @@ function AppRoutes() {
       <Route path="/analytics" element={<PrivateRoute roles={['admin']}><Analytics /></PrivateRoute>} />
       <Route path="/booking" element={<PrivateRoute><Booking /></PrivateRoute>} />
       <Route path="/users"   element={<PrivateRoute roles={['admin']}><Users /></PrivateRoute>} />
-      <Route path="/emaillog" element={<PrivateRoute roles={['admin']}><EmailLog /></PrivateRoute>} />
+      <Route path="/emaillog" element={<PrivateRoute roles={['admin','staff']}><EmailLog /></PrivateRoute>} />
       <Route path="/audit"   element={<PrivateRoute roles={['admin']}><AuditLog /></PrivateRoute>} />
       <Route path="/" element={<Navigate to={user ? (user.role === 'student' || user.role === 'invigilator' ? '/booking' : '/dashboard') : '/login'} />} />
       <Route path="*" element={<Navigate to="/" />} />

@@ -43,6 +43,9 @@ const NAV = {
       { path:'/inventory',   label:'Inventory' },
       { path:'/booking',     label:'Lab booking' },
     ]},
+    { group:'Reports', items:[
+      { path:'/emaillog', label:'Email log' },
+    ]},
   ],
   invigilator: [
     { group:'Exams', items:[
