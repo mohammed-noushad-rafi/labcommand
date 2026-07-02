@@ -28,3 +28,19 @@ router.post('/', async (req, res) => {
 });
 
 module.exports = router;
+router.get('/departments', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT department, 
+        json_agg(json_build_object('id',id,'name',name,'capacity',capacity) ORDER BY id) as labs,
+        COUNT(id)::int as lab_count
+       FROM labs 
+       WHERE department IS NOT NULL
+       GROUP BY department
+       ORDER BY department`
+    );
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
