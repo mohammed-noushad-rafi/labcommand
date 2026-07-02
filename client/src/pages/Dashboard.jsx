@@ -112,7 +112,7 @@ function LabMiniCard({ lab, idx, style, onClick }) {
       onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.borderColor=style.color; }}
       onMouseLeave={e => { e.currentTarget.style.transform=''; e.currentTarget.style.borderColor='#e9e9f0'; }}>
       <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:18 }}>
-        <div style={{ width:40, height:40, borderRadius:10, background:style.bg, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:15, color:style.color }}}>L{idx+1}</div>
+        <div style={{ width:40, height:40, borderRadius:10, background:style.bg, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:15, color:style.color }}>L{idx+1}</div>
         <div>
           <div style={{ fontSize:14, fontWeight:700, color:'#16161f' }}>{lab.name}</div>
           <div style={{ fontSize:11, color:'#a8a8b8' }}>Capacity: {lab.capacity} seats</div>
