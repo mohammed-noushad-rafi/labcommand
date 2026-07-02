@@ -24,6 +24,7 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { lab_id, date, start_time, end_time, purpose } = req.body;
+
     const conflict = await pool.query(
       `SELECT id FROM slots WHERE lab_id=$1 AND date=$2
        AND status NOT IN ('cancelled')
@@ -33,12 +34,29 @@ router.post('/', async (req, res) => {
     if (conflict.rows.length) {
       return res.status(400).json({ success: false, message: 'Time slot already booked' });
     }
+
+    const lab = await pool.query(`SELECT name FROM labs WHERE id=$1`, [lab_id]);
+    const labName = lab.rows[0]?.name || 'Lab';
+
     const { rows } = await pool.query(
       `INSERT INTO slots (lab_id, user_id, date, start_time, end_time, purpose)
        VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
       [lab_id, req.user.id, date, start_time, end_time, purpose]
     );
-    await auditLog(req.user.id, 'CREATE', 'slots', rows[0].id, `Booked ${lab_id} on ${date}`);
+
+    await auditLog(req.user.id, 'CREATE', 'slots', rows[0].id, `Booked ${labName} on ${date}`);
+
+    if (global.io) {
+      global.io.emit('booking:new', {
+        lab_name:   labName,
+        user_name:  req.user.name,
+        date,
+        start_time,
+        end_time,
+        purpose: purpose || '',
+      });
+    }
+
     res.status(201).json({ success: true, data: rows[0] });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
@@ -47,6 +65,11 @@ router.put('/:id/cancel', async (req, res) => {
   try {
     await pool.query(`UPDATE slots SET status='cancelled' WHERE id=$1`, [req.params.id]);
     await auditLog(req.user.id, 'UPDATE', 'slots', req.params.id, 'Booking cancelled');
+
+    if (global.io) {
+      global.io.emit('booking:cancelled', { slot_id: req.params.id });
+    }
+
     res.json({ success: true });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });

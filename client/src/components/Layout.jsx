@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLab } from '../context/LabContext';
+import BookingToast from './BookingToast';
 
 const NAV = {
   admin: [
@@ -185,10 +186,11 @@ export default function Layout({ children }) {
           )}
         </div>
 
-        <main style={{ flex:1, overflow:'auto' }}>
+       <main style={{ flex:1, overflow:'auto' }}>
           {children}
         </main>
       </div>
+      <BookingToast />
     </div>
   );
 }
