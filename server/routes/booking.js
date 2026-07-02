@@ -3,6 +3,7 @@ const router      = express.Router();
 const pool        = require('../db/connection');
 const verifyToken = require('../middleware/verifyToken');
 const auditLog    = require('../utils/auditLog');
+const { sendBookingNotification } = require('../utils/mailer');
 
 router.use(verifyToken);
 
@@ -56,6 +57,17 @@ router.post('/', async (req, res) => {
         purpose: purpose || '',
       });
     }
+
+    // Send email to all users
+    const allUsers = await pool.query('SELECT email FROM users WHERE is_active=true');
+    const recipients = allUsers.rows.map(u => u.email).filter(Boolean);
+    sendBookingNotification({
+      lab_name: labName,
+      user_name: req.user.name,
+      date, start_time, end_time,
+      purpose: purpose || '',
+      recipients,
+    });
 
     res.status(201).json({ success: true, data: rows[0] });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
