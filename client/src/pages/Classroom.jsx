@@ -101,9 +101,7 @@ export default function Classroom() {
         <h1 style={{ fontSize:26, fontWeight:700, color:'#16161f', margin:0, letterSpacing:'-0.02em' }}>Classroom mode</h1>
         <p style={{ fontSize:13, color:'#9494a3', marginTop:6 }}>Lock machines, broadcast messages and manage class sessions</p>
       </div>
-      <div style={{ background:'#fef8ee', border:'1px solid #f6dba8', borderRadius:12, padding:'12px 18px', marginBottom:28, fontSize:12.5, color:'#92400e' }}>
-        ⚠️ Classroom mode is only available for <strong>Computer Science labs</strong> — Physics and Chemistry labs have no computers to control.
-      </div>
+
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:14 }}>
         {departments.map(d => (
           <div key={d.department} onClick={() => setDept(d)}
