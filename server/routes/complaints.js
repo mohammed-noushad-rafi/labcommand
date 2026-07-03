@@ -9,15 +9,19 @@ router.use(verifyToken);
 router.get('/', async (req, res) => {
   try {
     const { role, id } = req.user;
-    let q = `SELECT c.*, e.name as equipment_name, l.name as lab_name,
+    const { lab_id } = req.query;
+    let q = `SELECT c.*, e.name as equipment_name, e.serial_number, e.category,
+             l.name as lab_name, l.id as lab_id,
              u1.name as raised_by_name, u2.name as assigned_to_name
              FROM complaints c
              JOIN equipment e ON c.equipment_id = e.id
              JOIN labs l ON e.lab_id = l.id
              LEFT JOIN users u1 ON c.raised_by = u1.id
-             LEFT JOIN users u2 ON c.assigned_to = u2.id`;
+             LEFT JOIN users u2 ON c.assigned_to = u2.id
+             WHERE 1=1`;
     const params = [];
-    if (role === 'student') { params.push(id); q += ` WHERE c.raised_by=$1`; }
+    if (role === 'student') { params.push(id); q += ` AND c.raised_by=${params.length}`; }
+    if (lab_id) { params.push(lab_id); q += ` AND l.id=${params.length}`; }
     q += ' ORDER BY c.created_at DESC';
     const { rows } = await pool.query(q, params);
     res.json({ success: true, data: rows });
