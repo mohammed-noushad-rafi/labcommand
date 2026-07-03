@@ -331,4 +331,32 @@ export default function LabMap() {
 }
 
 const page   = { padding:'32px 36px', maxWidth:1180, fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif' };
-const backBtn= { background:'#f5f5f7', border:'none', color:'#555', borderRadius:8, padding:'6px 12px', cursor:'pointer', fontSize:12, fontWeight:600 };
+const backBtn= { background:'#f5f5f7', border:'none', color:'#555', borderRadius:8, padding:'6px 12px', cursor:'pointer', fontSize:12, fontWeight:600 };// LEVEL 1 — Department cards
+function DeptLevel({ departments, onSelect }) {
+  return (
+    <div>
+      <div style={{ marginBottom:40 }}>
+        <div style={{ width:32, height:3, borderRadius:2, background:'linear-gradient(90deg,#4f46e5,#7c3aed)', marginBottom:14 }}/>
+        <h1 style={{ fontSize:26, fontWeight:700, color:'#16161f', margin:0, letterSpacing:'-0.02em' }}>Lab map</h1>
+        <p style={{ fontSize:13, color:'#9494a3', marginTop:6 }}>Choose a department to explore</p>
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:14 }}>
+        {departments.map(d => {
+          const meta = getMeta(d.department);
+          return (
+            <div key={d.department} onClick={() => onSelect(d)}
+              style={{ background:'#fff', border:'1px solid #ebebf0', borderRadius:16, padding:'32px 28px', cursor:'pointer', transition:'all .15s ease' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor=meta.color; e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 8px 24px '+meta.color+'12'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor='#ebebf0'; e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
+              <div style={{ fontSize:34, marginBottom:18 }}>{meta.icon}</div>
+              <div style={{ fontSize:18, fontWeight:700, color:'#16161f', marginBottom:4 }}>{d.department}</div>
+              <div style={{ fontSize:12, color:'#bbb', fontWeight:500 }}>{d.lab_count} lab{d.lab_count>1?'s':''}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+
