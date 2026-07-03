@@ -204,7 +204,7 @@ function LabEquipment({ lab, dept, equipment, onBack, onBackToDept, onRefresh })
   const suggestions = catalog.filter(n => n.toLowerCase().includes(nameInput.toLowerCase()) && nameInput.length > 0);
 
   const openAdd = () => {
-    const serial = generateSerial(dept.department, lab.name, labEquip.length);
+    const serial = generateSerial(dept.department, lab.name, labEquip);
     setForm({ lab_id:lab.id, name:'', category:'', serial_number:serial, status:'working', purchase_date:'', last_service_date:'', warranty_expiry_date:'', amc_vendor:'', amc_expiry_date:'' });
     setNameInput('');
     setEditing(null);
@@ -385,13 +385,7 @@ function LabEquipment({ lab, dept, equipment, onBack, onBackToDept, onRefresh })
                 </div>
                 <div>
                   <label style={label}>Serial number</label>
-                  <div style={{ display:'flex', gap:6 }}>
-                    <input value={form.serial_number} onChange={e=>setForm({...form,serial_number:e.target.value})} style={{ ...inp, flex:1 }}/>
-                    <button onClick={()=>setForm({...form,serial_number:generateSerial(dept.department,lab.name,labEquip.length)})}
-                      style={{ background:meta.color+'14', border:'none', borderRadius:8, padding:'0 10px', cursor:'pointer', fontSize:11, color:meta.color, fontWeight:600, whiteSpace:'nowrap' }}>
-                      ↻ New
-                    </button>
-                  </div>
+<input value={form.serial_number} readOnly style={{ ...inp, background:'#fafafd', color:'#9494a3', cursor:'default' }}/>
                 </div>
               </div>
 
