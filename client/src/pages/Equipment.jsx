@@ -29,6 +29,21 @@ const EQUIPMENT_CATALOG = {
   ],
 };
 
+const CATEGORY_CATALOG = {
+  'Computer Science': [
+    'Computer','Peripheral','Networking','Storage','Display',
+    'Audio','Printing','Server','Microcontroller','Power',
+  ],
+  'Physics': [
+    'Measurement','Signal','Power Supply','Optics','Mechanics',
+    'Electronics','Thermal','Waves','Magnetism','General',
+  ],
+  'Chemistry': [
+    'Separation','Analysis','Heating','Mixing','Measurement',
+    'Glassware','Safety','Filtration','Titration','General',
+  ],
+};
+
 function generateSerial(dept, labName) {
   const prefix = dept === 'Computer Science' ? 'CS' : dept === 'Physics' ? 'PH' : 'CH';
   const labNum = labName.match(/d+/) ? labName.match(/d+/)[0] : '1';
@@ -140,6 +155,34 @@ function LabLevel({ dept, equipment, onSelect, onBack }) {
   );
 }
 
+function CategoryInput({ value, onChange, categories }) {
+  const [input, setInput] = useState(value || '');
+  const [show, setShow]   = useState(false);
+  const sugg = categories.filter(s => s.toLowerCase().includes(input.toLowerCase()) && input.length > 0);
+  useEffect(() => { setInput(value || ''); }, [value]);
+  return (
+    <div style={{ position:'relative' }}>
+      <input value={input}
+        onChange={e => { setInput(e.target.value); onChange(e.target.value); setShow(true); }}
+        onFocus={() => setShow(true)}
+        placeholder="Search or type a category..."
+        style={{ padding:'9px 12px', border:'1px solid #ebebf0', borderRadius:9, fontSize:13, outline:'none', width:'100%', boxSizing:'border-box', color:'#16161f' }}/>
+      {show && sugg.length > 0 && (
+        <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'#fff', border:'1px solid #ebebf0', borderRadius:10, boxShadow:'0 8px 24px rgba(16,16,31,0.1)', zIndex:200, maxHeight:160, overflowY:'auto', marginTop:4 }}>
+          {sugg.map(s => (
+            <div key={s} onClick={() => { setInput(s); onChange(s); setShow(false); }}
+              style={{ padding:'9px 14px', cursor:'pointer', fontSize:13, color:'#16161f', borderBottom:'1px solid #f7f7fb' }}
+              onMouseEnter={e => e.currentTarget.style.background='#f7f7ff'}
+              onMouseLeave={e => e.currentTarget.style.background=''}>
+              {s}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // LEVEL 3 — Equipment in lab
 function LabEquipment({ lab, dept, equipment, onBack, onBackToDept, onRefresh }) {
   const meta     = getMeta(dept.department);
@@ -161,7 +204,7 @@ function LabEquipment({ lab, dept, equipment, onBack, onBackToDept, onRefresh })
   const suggestions = catalog.filter(n => n.toLowerCase().includes(nameInput.toLowerCase()) && nameInput.length > 0);
 
   const openAdd = () => {
-    const serial = generateSerial(dept.department, lab.name);
+    const serial = generateSerial(dept.department, lab.name, labEquip.length);
     setForm({ lab_id:lab.id, name:'', category:'', serial_number:serial, status:'working', purchase_date:'', last_service_date:'', warranty_expiry_date:'', amc_vendor:'', amc_expiry_date:'' });
     setNameInput('');
     setEditing(null);
@@ -334,15 +377,19 @@ function LabEquipment({ lab, dept, equipment, onBack, onBackToDept, onRefresh })
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
                 <div>
                   <label style={label}>Category</label>
-                  <input value={form.category} onChange={e=>setForm({...form,category:e.target.value})} placeholder="e.g. Instrument" style={inp}/>
+                  <CategoryInput
+                    value={form.category}
+                    onChange={v => setForm({...form, category:v})}
+                    categories={CATEGORY_CATALOG[dept.department] || []}
+                  />
                 </div>
                 <div>
                   <label style={label}>Serial number</label>
                   <div style={{ display:'flex', gap:6 }}>
                     <input value={form.serial_number} onChange={e=>setForm({...form,serial_number:e.target.value})} style={{ ...inp, flex:1 }}/>
-                    <button onClick={()=>setForm({...form,serial_number:generateSerial(dept.department,lab.name)})}
+                    <button onClick={()=>setForm({...form,serial_number:generateSerial(dept.department,lab.name,labEquip.length)})}
                       style={{ background:meta.color+'14', border:'none', borderRadius:8, padding:'0 10px', cursor:'pointer', fontSize:11, color:meta.color, fontWeight:600, whiteSpace:'nowrap' }}>
-                      ↻ Gen
+                      ↻ New
                     </button>
                   </div>
                 </div>
