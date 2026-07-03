@@ -371,18 +371,20 @@ function LabExams({ lab, dept, sessions, onBack, onBackToDept, onRefresh }) {
                 </div>
               </div>
 
-              <div>
-                <label style={lbl}>Auto-lock threshold (%)</label>
-                <input type="range" min={0} max={100} value={form.auto_lock_threshold}
-                  onChange={e=>setForm({...form,auto_lock_threshold:parseInt(e.target.value)})}
-                  style={{ width:'100%', accentColor:meta.color }}/>
-                <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'#9494a3', marginTop:4 }}>
-                  <span>0% — Never lock</span>
-                  <span style={{ fontWeight:700, color:meta.color }}>{form.auto_lock_threshold}%</span>
-                  <span>100% — Always lock</span>
+              {isComputer && (
+                <div>
+                  <label style={lbl}>Auto-lock threshold (%)</label>
+                  <input type="range" min={0} max={100} value={form.auto_lock_threshold}
+                    onChange={e=>setForm({...form,auto_lock_threshold:parseInt(e.target.value)})}
+                    style={{ width:'100%', accentColor:meta.color }}/>
+                  <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'#9494a3', marginTop:4 }}>
+                    <span>0% — Never lock</span>
+                    <span style={{ fontWeight:700, color:meta.color }}>{form.auto_lock_threshold}%</span>
+                    <span>100% — Always lock</span>
+                  </div>
+                  <div style={{ fontSize:11, color:'#bbb', marginTop:4 }}>Machine locks when trust score drops below this value</div>
                 </div>
-                <div style={{ fontSize:11, color:'#bbb', marginTop:4 }}>Machine locks when trust score drops below this value</div>
-              </div>
+              )}
             </div>
             <div style={{ display:'flex', gap:10, marginTop:24, justifyContent:'flex-end' }}>
               <button onClick={()=>setModal(false)} style={{ background:'none', border:'1px solid #ebebf0', borderRadius:10, padding:'10px 18px', fontSize:13, cursor:'pointer', color:'#555' }}>Cancel</button>
