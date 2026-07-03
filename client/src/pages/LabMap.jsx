@@ -149,17 +149,17 @@ export default function LabMap() {
         </div>
 
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:12, marginBottom:24 }}>
-          {isComputer ? [
-            { label:'Total',   value:labMachines.length,                                                          color:'#4f46e5', bg:'#f5f4fe' },
-            { label:'Online',  value:labMachines.filter(m=>m.status==='online').length,                           color:'#0f9d58', bg:'#eefbf3' },
-            { label:'Offline', value:labMachines.filter(m=>m.status==='offline').length,                          color:'#a8a8b8', bg:'#fafafd' },
+          {(isComputer ? [
+            { label:'Total',   value:labMachines.length,                                                             color:'#4f46e5', bg:'#f5f4fe' },
+            { label:'Online',  value:labMachines.filter(m=>m.status==='online').length,                              color:'#0f9d58', bg:'#eefbf3' },
+            { label:'Offline', value:labMachines.filter(m=>m.status==='offline').length,                             color:'#a8a8b8', bg:'#fafafd' },
             { label:'Locked',  value:labMachines.filter(m=>['locked','exam','classroom'].includes(m.status)).length, color:'#d97706', bg:'#fef8ee' },
           ] : [
             { label:'Total',       value:labEquipment.length,                                    color:style.color, bg:style.bg },
             { label:'Working',     value:labEquipment.filter(e=>e.status==='working').length,    color:'#0f9d58', bg:'#eefbf3' },
             { label:'Faulty',      value:labEquipment.filter(e=>e.status==='faulty').length,     color:'#dc2626', bg:'#fef2f2' },
             { label:'Maintenance', value:labEquipment.filter(e=>e.status==='maintenance').length,color:'#d97706', bg:'#fef8ee' },
-          ].map(s => (
+          ]).map(s => (
             <div key={s.label} style={{ background:s.bg, borderRadius:12, padding:'16px', textAlign:'center' }}>
               <div style={{ fontSize:24, fontWeight:800, color:s.color }}>{s.value}</div>
               <div style={{ fontSize:11, color:'#7c7c8a', marginTop:3, fontWeight:500 }}>{s.label}</div>
