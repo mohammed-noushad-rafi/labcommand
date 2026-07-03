@@ -82,8 +82,8 @@ function LabLevel({ dept, onSelect, onBack }) {
                 L{idx + 1}
               </div>
               <div>
-                <div style={{ fontSize:14, fontWeight:600, color:'#16161f' }}>{lab.name}</div>
-                <div style={{ fontSize:11, color:'#bbb', marginTop:2 }}>Capacity: {lab.capacity} seats</div>
+                <div style={{ fontSize:14, fontWeight:600, color:'#16161f' }}>Lab {idx + 1}</div>
+                <div style={{ fontSize:11, color:'#bbb', marginTop:2 }}>{lab.name} · {lab.capacity} seats</div>
               </div>
             </div>
             <span style={{ fontSize:18, color:'#ddd' }}>›</span>
