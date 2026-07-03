@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
 const DEPT_META = {
-  'Computer Science': { icon:'🖥️', color:'#4f46e5' },
-  'Physics':          { icon:'⚛️',  color:'#0891b2' },
-  'Chemistry':        { icon:'🧪', color:'#0f9d58' },
+  'Computer Science': { icon:'🖥️', color:'#4f46e5', hasComputers:true },
+  'Physics':          { icon:'⚛️',  color:'#0891b2', hasComputers:false },
+  'Chemistry':        { icon:'🧪', color:'#0f9d58', hasComputers:false },
 };
-function getMeta(n) { return DEPT_META[n] || { icon:'🏫', color:'#4f46e5' }; }
+function getMeta(n) { return DEPT_META[n] || { icon:'🏫', color:'#4f46e5', hasComputers:false }; }
 
 const EXAM_SUBJECTS = {
   'Computer Science': [
@@ -65,7 +65,14 @@ function DeptLevel({ departments, sessions, onSelect }) {
               onMouseLeave={e => { e.currentTarget.style.borderColor=active>0?'#f5bcbc':'#ebebf0'; e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
               <div style={{ fontSize:34, marginBottom:18 }}>{meta.icon}</div>
               <div style={{ fontSize:18, fontWeight:700, color:'#16161f', marginBottom:4 }}>{d.department}</div>
-              <div style={{ fontSize:12, color:'#bbb', marginBottom:16 }}>{d.lab_count} lab{d.lab_count>1?'s':''}</div>
+              <div style={{ fontSize:12, color:'#bbb', marginBottom:8 }}>{d.lab_count} lab{d.lab_count>1?'s':''}</div>
+              <div style={{ marginBottom:12 }}>
+                <span style={{ fontSize:10.5, fontWeight:600, padding:'3px 8px', borderRadius:6,
+                  background: meta.hasComputers ? '#eef2ff' : '#f5f5f7',
+                  color: meta.hasComputers ? '#4f46e5' : '#9494a3' }}>
+                  {meta.hasComputers ? '🖥️ Full monitoring' : '📋 Schedule only'}
+                </span>
+              </div>
               <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
                 {active>0    && <span style={{ fontSize:11, color:'#dc2626', fontWeight:700 }}>🔴 {active} live</span>}
                 {scheduled>0 && <span style={{ fontSize:11, color:'#2563eb', fontWeight:600 }}>{scheduled} scheduled</span>}
@@ -124,7 +131,8 @@ function LabLevel({ dept, sessions, onSelect, onBack }) {
       </div>
       <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
         {dept.labs.map((lab,idx) => {
-          const labSessions = sessions.filter(s=>s.lab_id===lab.id);
+          const isComputer  = getMeta(dept.department).hasComputers;
+  const labSessions = sessions.filter(s=>s.lab_id===lab.id);
           const active    = labSessions.filter(s=>s.status==='active').length;
           const scheduled = labSessions.filter(s=>s.status==='scheduled').length;
           const completed = labSessions.filter(s=>s.status==='completed').length;
@@ -194,11 +202,19 @@ function LabExams({ lab, dept, sessions, onBack, onBackToDept, onRefresh }) {
   };
 
   const startExam = async (id, title) => {
-    if (!window.confirm('Start exam: "'+title+'"? This will lock all online machines.')) return;
+    const msg = isComputer
+      ? 'Start exam: "'+title+'"? This will lock all online machines.'
+      : 'Start exam: "'+title+'"?';
+    if (!window.confirm(msg)) return;
     try {
       const r = await api.post('/exams/'+id+'/start');
-      alert('Exam started — '+r.data.machines+' machines locked');
-      navigate('/exam/war-room/'+id);
+      if (isComputer) {
+        alert('Exam started — '+r.data.machines+' machines locked');
+        navigate('/exam/war-room/'+id);
+      } else {
+        alert('Exam session started');
+        onRefresh();
+      }
     } catch (err) { alert(err.response?.data?.message||'Error'); }
   };
 
@@ -231,7 +247,7 @@ function LabExams({ lab, dept, sessions, onBack, onBackToDept, onRefresh }) {
         </button>
       </div>
 
-      {labSessions.filter(s=>s.status==='active').map(s=>(
+      {isComputer && labSessions.filter(s=>s.status==='active').map(s=>(
         <ActiveBanner key={s.id} session={s}/>
       ))}
 
@@ -286,11 +302,11 @@ function LabExams({ lab, dept, sessions, onBack, onBackToDept, onRefresh }) {
                         )}
                         {s.status==='active' && (
                           <>
-                            <button onClick={()=>navigate('/exam/war-room/'+s.id)} style={{ background:'#dc2626', color:'#fff', border:'none', borderRadius:7, padding:'5px 12px', fontSize:12, fontWeight:700, cursor:'pointer' }}>War Room</button>
+                            {isComputer && <button onClick={()=>navigate('/exam/war-room/'+s.id)} style={{ background:'#dc2626', color:'#fff', border:'none', borderRadius:7, padding:'5px 12px', fontSize:12, fontWeight:700, cursor:'pointer' }}>War Room</button>}
                             <button onClick={()=>endExam(s.id,s.title)} style={{ background:'none', border:'1px solid #f5bcbc', color:'#dc2626', borderRadius:7, padding:'5px 12px', fontSize:12, cursor:'pointer' }}>End</button>
                           </>
                         )}
-                        {s.status==='completed' && (
+                        {s.status==='completed' && isComputer && (
                           <button onClick={()=>navigate('/exam/war-room/'+s.id)} style={{ background:'none', border:'1px solid #ebebf0', color:'#555', borderRadius:7, padding:'5px 12px', fontSize:12, cursor:'pointer' }}>Report</button>
                         )}
                       </div>
@@ -309,6 +325,11 @@ function LabExams({ lab, dept, sessions, onBack, onBackToDept, onRefresh }) {
             <div style={{ marginBottom:24 }}>
               <h2 style={{ fontSize:18, fontWeight:700, color:'#16161f', margin:0 }}>Create exam session</h2>
               <p style={{ fontSize:12, color:'#9494a3', marginTop:4 }}>{lab.name} · {dept.department}</p>
+              {!isComputer && (
+                <div style={{ background:'#f5f5f7', borderRadius:8, padding:'8px 12px', marginTop:8, fontSize:12, color:'#9494a3' }}>
+                  📋 Schedule-only mode — no machine monitoring for {dept.department} labs
+                </div>
+              )}
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
               <div>
