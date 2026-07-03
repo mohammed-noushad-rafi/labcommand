@@ -180,6 +180,7 @@ function LabExams({ lab, dept, sessions, onBack, onBackToDept, onRefresh }) {
     lab_id:lab.id, title:'', exam_date:'', start_time:'', end_time:'', auto_lock_threshold:40,
   });
 
+  const isComputer  = getMeta(dept.department).hasComputers;
   const labSessions = sessions.filter(s=>s.lab_id===lab.id);
   const counts = {
     total:labSessions.length,
