@@ -8,13 +8,15 @@ router.use(verifyToken);
 
 router.get('/', async (req, res) => {
   try {
-    const { rows } = await pool.query(`
-      SELECT i.*, l.name as lab_name,
-        CASE WHEN i.quantity <= i.min_threshold THEN true ELSE false END as is_low
+    const { lab_id } = req.query;
+    let q = `SELECT i.*, l.name as lab_name, l.id as lab_id,
+      CASE WHEN i.quantity <= i.min_threshold THEN true ELSE false END as is_low
       FROM inventory i
-      LEFT JOIN labs l ON i.lab_id = l.id
-      ORDER BY is_low DESC, i.item_name
-    `);
+      LEFT JOIN labs l ON i.lab_id = l.id WHERE 1=1`;
+    const params = [];
+    if (lab_id) { params.push(lab_id); q += ` AND i.lab_id=${params.length}`; }
+    q += ' ORDER BY is_low DESC, i.item_name';
+    const { rows } = await pool.query(q, params);
     res.json({ success: true, data: rows });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
