@@ -326,11 +326,7 @@ function LabExams({ lab, dept, sessions, onBack, onBackToDept, onRefresh }) {
             <div style={{ marginBottom:24 }}>
               <h2 style={{ fontSize:18, fontWeight:700, color:'#16161f', margin:0 }}>Create exam session</h2>
               <p style={{ fontSize:12, color:'#9494a3', marginTop:4 }}>{lab.name} · {dept.department}</p>
-              {!isComputer && (
-                <div style={{ background:'#f5f5f7', borderRadius:8, padding:'8px 12px', marginTop:8, fontSize:12, color:'#9494a3' }}>
-                  📋 Schedule-only mode — no machine monitoring for {dept.department} labs
-                </div>
-              )}
+
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
               <div>
