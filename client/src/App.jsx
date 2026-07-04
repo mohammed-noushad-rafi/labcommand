@@ -17,7 +17,7 @@ import Users    from './pages/Users';
 import AuditLog from './pages/AuditLog';
 import EmailLog from './pages/EmailLog';
 import Analytics from './pages/Analytics';
-import Predictions from './pages/Predictions';
+import Predictions from './pages/AIPredictions';
 import Classroom from './pages/Classroom';
 import { LabProvider } from './context/LabContext';
 
