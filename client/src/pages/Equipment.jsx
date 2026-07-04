@@ -84,13 +84,7 @@ function DeptLevel({ departments, equipment, onSelect }) {
               onMouseLeave={e => { e.currentTarget.style.borderColor='#ebebf0'; e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
               <div style={{ fontSize:34, marginBottom:18 }}>{meta.icon}</div>
               <div style={{ fontSize:18, fontWeight:700, color:'#16161f', marginBottom:4 }}>{d.department}</div>
-              <div style={{ fontSize:12, color:'#bbb', marginBottom:16 }}>{d.lab_count} lab{d.lab_count>1?'s':''}</div>
-              {deptEquip.length > 0 && (
-                <div style={{ display:'flex', gap:10 }}>
-                  <span style={{ fontSize:11, color:'#0f9d58', fontWeight:600 }}>{working} working</span>
-                  {faulty > 0 && <span style={{ fontSize:11, color:'#dc2626', fontWeight:600 }}>{faulty} faulty</span>}
-                </div>
-              )}
+              <div style={{ fontSize:12, color:'#bbb', fontWeight:500 }}>{d.lab_count} lab{d.lab_count>1?'s':''}</div>
             </div>
           );
         })}
