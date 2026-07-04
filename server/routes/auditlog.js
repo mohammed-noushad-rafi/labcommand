@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
       FROM audit_log a
       LEFT JOIN users u ON a.user_id = u.id
       ORDER BY a.created_at DESC
-      LIMIT 200
+      LIMIT 500
     `);
     res.json({ success: true, data: rows });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
