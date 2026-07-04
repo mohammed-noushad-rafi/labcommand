@@ -294,34 +294,12 @@ export default function LabMap() {
             : deptEquipment.filter(e => e.status === 'working').length;
           return (
             <div key={d.department} onClick={() => setDept(d)}
-              style={{ background:'#fff', border:'1px solid #e9e9f0', borderRadius:18, padding:'28px', cursor:'pointer', transition:'all .18s', boxShadow:'0 1px 3px rgba(16,16,30,0.05)', position:'relative', overflow:'hidden' }}
-              onMouseEnter={e => { e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.boxShadow='0 12px 32px ' + style.color + '22'; e.currentTarget.style.borderColor=style.color; }}
-              onMouseLeave={e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 1px 3px rgba(16,16,30,0.05)'; e.currentTarget.style.borderColor='#e9e9f0'; }}>
-              <div style={{ position:'absolute', top:-20, right:-20, width:100, height:100, borderRadius:'50%', background:style.bg, opacity:0.5 }}/>
-              <div style={{ display:'flex', alignItems:'flex-start', gap:14, marginBottom:20, position:'relative' }}>
-                <div style={{ width:52, height:52, borderRadius:14, background:style.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:26 }}>{style.icon}</div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:17, fontWeight:700, color:'#16161f' }}>{d.department}</div>
-                  <div style={{ fontSize:12, color:'#a8a8b8', marginTop:3 }}>{style.desc}</div>
-                  <div style={{ fontSize:11, color:'#bbb', marginTop:2 }}>{d.lab_count} labs · {items.length} {isComputer ? 'computers' : 'instruments'}</div>
-                </div>
-                <div style={{ background:style.bg, color:style.color, borderRadius:20, padding:'5px 14px', fontSize:12, fontWeight:700 }}>
-                  {isComputer ? online + ' online' : online + ' working'}
-                </div>
-              </div>
-              <div style={{ display:'flex', gap:4, flexWrap:'wrap', marginBottom:14 }}>
-                {items.slice(0,24).map((item, i) => {
-                  const color = isComputer
-                    ? (STATUS_COLOR[item.status] || STATUS_COLOR.offline).dot
-                    : (EQUIP_STATUS_COLOR[item.status] || EQUIP_STATUS_COLOR.working).dot;
-                  return <span key={i} title={item.hostname || item.name} style={{ width:10, height:10, borderRadius:'50%', background:color, display:'inline-block' }}/>;
-                })}
-                {items.length > 24 && <span style={{ fontSize:10, color:'#a8a8b8', alignSelf:'center' }}>+{items.length-24}</span>}
-              </div>
-              <div style={{ paddingTop:14, borderTop:'1px solid #f0f0f6', display:'flex', alignItems:'center', gap:6 }}>
-                <span style={{ fontSize:12, color:style.color, fontWeight:600 }}>Explore {d.department} labs</span>
-                <span style={{ color:style.color }}>→</span>
-              </div>
+              style={{ background:'#fff', border:'1px solid #ebebf0', borderRadius:16, padding:'32px 28px', cursor:'pointer', transition:'all .15s ease' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor=style.color; e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 8px 24px '+style.color+'12'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor='#ebebf0'; e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
+              <div style={{ fontSize:34, marginBottom:18 }}>{style.icon}</div>
+              <div style={{ fontSize:18, fontWeight:700, color:'#16161f', marginBottom:4 }}>{d.department}</div>
+              <div style={{ fontSize:12, color:'#bbb', fontWeight:500 }}>{d.lab_count} lab{d.lab_count>1?'s':''}</div>
             </div>
           );
         })}
