@@ -7,18 +7,24 @@ const auditLog    = require('../utils/auditLog');
 router.use(verifyToken);
 
 router.get('/departments', async (req, res) => {
-  // Staff only see their assigned department
   const staffDept = req.user?.role === 'staff' ? req.user?.department : null;
   try {
-    const { rows } = await pool.query(
-      `SELECT department,
-        json_agg(json_build_object('id',id,'name',name,'capacity',capacity) ORDER BY id) as labs,
-        COUNT(id)::int as lab_count
-       FROM labs
-       WHERE department IS NOT NULL
-       GROUP BY department
-       ORDER BY department`
-    );
+    const query = staffDept
+      ? `SELECT department,
+          json_agg(json_build_object('id',id,'name',name,'capacity',capacity) ORDER BY id) as labs,
+          COUNT(id)::int as lab_count
+         FROM labs
+         WHERE department = $1
+         GROUP BY department
+         ORDER BY department`
+      : `SELECT department,
+          json_agg(json_build_object('id',id,'name',name,'capacity',capacity) ORDER BY id) as labs,
+          COUNT(id)::int as lab_count
+         FROM labs
+         WHERE department IS NOT NULL
+         GROUP BY department
+         ORDER BY department`;
+    const { rows } = await pool.query(query, staffDept ? [staffDept] : []);
     res.json({ success: true, data: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

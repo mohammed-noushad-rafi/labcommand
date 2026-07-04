@@ -218,23 +218,7 @@ export default function Users() {
                 )}
               </div>
 
-              {form.role==='staff' && form.department && (
-                <div style={{ background:'#f7f7ff', border:'1px solid #ebebf0', borderRadius:8, padding:'12px 14px', fontSize:12 }}>
-                  <div style={{ fontWeight:600, color:'#16161f', marginBottom:4 }}>
-                    {DEPT_META[form.department]?.icon} {form.department} Staff
-                  </div>
-                  <div style={{ color:'#9494a3', lineHeight:1.6 }}>
-                    This user will only see labs and data belonging to the <strong>{form.department}</strong> department.
-                    They can manage equipment, maintenance, complaints, inventory and bookings for their labs.
-                  </div>
-                </div>
-              )}
 
-              {form.role==='admin' && (
-                <div style={{ background:'#fef8ee', border:'1px solid #f6dba8', borderRadius:8, padding:'12px 14px', fontSize:12, color:'#92400e' }}>
-                  ⚠️ Admin users have full access to all departments and all features including user management.
-                </div>
-              )}
             </div>
             <div style={{ display:'flex', gap:10, marginTop:24, justifyContent:'flex-end' }}>
               <button onClick={()=>setModal(false)} style={{ background:'none', border:'1px solid #ebebf0', borderRadius:10, padding:'10px 18px', fontSize:13, cursor:'pointer', color:'#555' }}>Cancel</button>
