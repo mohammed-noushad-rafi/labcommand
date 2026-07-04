@@ -151,6 +151,13 @@ export default function Layout({ children }) {
               <div style={{ overflow:'hidden' }}>
                 <div style={{ fontSize:12.5, fontWeight:600, color:'#16161f', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{user?.name}</div>
                 <div style={{ fontSize:11, color:'#a8a8b8', textTransform:'capitalize' }}>{user?.role}</div>
+                {user?.role === 'staff' && user?.department && (
+                  <div style={{ fontSize:10, color:'#0891b2', fontWeight:600, marginTop:2,
+                    background:'#ecfeff', border:'1px solid #a5f3fc', borderRadius:4,
+                    padding:'1px 6px', display:'inline-block' }}>
+                    {user.department === 'Computer Science' ? '🖥️' : user.department === 'Physics' ? '⚛️' : '🧪'} {user.department}
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -7,6 +7,8 @@ const auditLog    = require('../utils/auditLog');
 router.use(verifyToken);
 
 router.get('/departments', async (req, res) => {
+  // Staff only see their assigned department
+  const staffDept = req.user?.role === 'staff' ? req.user?.department : null;
   try {
     const { rows } = await pool.query(
       `SELECT department,
