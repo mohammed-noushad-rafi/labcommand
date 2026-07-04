@@ -14,13 +14,13 @@ const PALETTE = [
 ];
 
 const DEPT_META = {
-  'Computer Science': { icon:'🖥️', color:'#4f46e5', desc:'Programming · Networking · Hardware' },
-  'Physics':          { icon:'⚛️',  color:'#0891b2', desc:'Optics · Electronics · Research' },
-  'Chemistry':        { icon:'🧪', color:'#0f9d58', desc:'Organic · Inorganic · Analysis' },
+  'Computer Science': { icon:'🖥️', color:'#4f46e5' },
+  'Physics':          { icon:'⚛️',  color:'#0891b2' },
+  'Chemistry':        { icon:'🧪', color:'#0f9d58' },
 };
 
 function getMeta(name) {
-  return DEPT_META[name] || { icon:'🏫', color:'#4f46e5', desc:'College laboratory' };
+  return DEPT_META[name] || { icon:'🏫', color:'#4f46e5' };
 }
 
 // LEVEL 1 — Department cards
@@ -43,10 +43,10 @@ function DeptLevel({ departments, onSelect }) {
               onMouseLeave={e => { e.currentTarget.style.borderColor = '#ebebf0'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}>
               <div style={{ fontSize:32, marginBottom:16 }}>{meta.icon}</div>
               <div style={{ fontSize:17, fontWeight:700, color:'#16161f', marginBottom:6 }}>{d.department}</div>
-              <div style={{ fontSize:12, color:'#9494a3', marginBottom:20, lineHeight:1.5 }}>{meta.desc}</div>
+
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                 <span style={{ fontSize:11, color:'#bbb', fontWeight:500 }}>{d.lab_count} lab{d.lab_count > 1 ? 's' : ''}</span>
-                <span style={{ fontSize:13, color:meta.color, fontWeight:600 }}>Explore →</span>
+
               </div>
             </div>
           );
