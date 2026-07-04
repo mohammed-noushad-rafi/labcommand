@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 
 const DEPT_META = {
   'Computer Science': { icon:'🖥️', color:'#4f46e5', hasComputers:true },
@@ -169,7 +170,9 @@ function LabLevel({ dept, sessions, onSelect, onBack }) {
 
 // LEVEL 3 — Exam sessions for lab
 function LabExams({ lab, dept, sessions, onBack, onBackToDept, onRefresh }) {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
+  const { user }  = useAuth();
+  const isAdmin   = user?.role === 'admin';
   const meta     = getMeta(dept.department);
   const subjects = EXAM_SUBJECTS[dept.department] || [];
   const [modal,    setModal]   = useState(false);
@@ -243,9 +246,11 @@ function LabExams({ lab, dept, sessions, onBack, onBackToDept, onRefresh }) {
           <h1 style={{ fontSize:22, fontWeight:700, color:'#16161f', margin:0 }}>{lab.name}</h1>
           <p style={{ fontSize:13, color:'#9494a3', marginTop:4 }}>Exam sessions · Capacity: {lab.capacity} seats</p>
         </div>
-        <button onClick={()=>setModal(true)} style={{ background:meta.color, color:'#fff', border:'none', borderRadius:10, padding:'10px 18px', fontSize:13, fontWeight:600, cursor:'pointer' }}>
-          + Create exam session
-        </button>
+        {isAdmin && (
+          <button onClick={()=>setModal(true)} style={{ background:meta.color, color:'#fff', border:'none', borderRadius:10, padding:'10px 18px', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+            + Create exam session
+          </button>
+        )}
       </div>
 
       {isComputer && labSessions.filter(s=>s.status==='active').map(s=>(
@@ -298,7 +303,7 @@ function LabExams({ lab, dept, sessions, onBack, onBackToDept, onRefresh }) {
                     <td style={{ ...td, color:'#9494a3' }}>{s.created_by_name}</td>
                     <td style={td}>
                       <div style={{ display:'flex', gap:6 }}>
-                        {s.status==='scheduled' && (
+                        {s.status==='scheduled' && isAdmin && (
                           <button onClick={()=>startExam(s.id,s.title)} style={{ background:meta.color, color:'#fff', border:'none', borderRadius:7, padding:'5px 12px', fontSize:12, fontWeight:600, cursor:'pointer' }}>Start</button>
                         )}
                         {s.status==='active' && (
