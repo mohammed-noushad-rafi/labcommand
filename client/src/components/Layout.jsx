@@ -80,12 +80,12 @@ function getPageTitle(pathname) {
 
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
-  const { labs, selectedLab, setSelectedLab } = useLab();
+
   const location = useLocation();
   const navigate  = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const groups = NAV[user?.role] || [];
-  const showLabPicker = !['/users','/audit'].includes(location.pathname);
+
 
   return (
     <div style={{ display:'flex', minHeight:'100vh', background:'#f7f7fb', fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif' }}>
@@ -182,19 +182,7 @@ export default function Layout({ children }) {
           <span style={{ fontSize:12.5, color:'#ddd' }}>/</span>
           <span style={{ fontSize:12.5, color:'#16161f', fontWeight:600 }}>{getPageTitle(location.pathname)}</span>
 
-          {showLabPicker && (
-            <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:6, border:'1px solid #e9e9f0', borderRadius:20, padding:'4px 10px 4px 8px' }}>
-              <span style={{ width:6, height:6, borderRadius:'50%', background: selectedLab==='all' ? '#b4b4c0' : '#0f9d58', flexShrink:0 }} />
-              <select
-                value={selectedLab}
-                onChange={e => setSelectedLab(e.target.value)}
-                style={{ border:'none', outline:'none', background:'transparent', fontSize:12, color:'#5a5a6c', cursor:'pointer', fontWeight:500 }}
-              >
-                <option value="all">All labs</option>
-                {labs.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </select>
-            </div>
-          )}
+
         </div>
 
        <main style={{ flex:1, overflow:'auto' }}>
