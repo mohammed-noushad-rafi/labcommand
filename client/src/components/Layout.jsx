@@ -49,8 +49,7 @@ const NAV = {
   ],
   invigilator: [
     { group:'Exams', items:[
-      { path:'/exam',      label:'Exam monitor' },
-      { path:'/classroom', label:'Classroom mode' },
+      { path:'/exam', label:'Exam monitor' },
     ]},
     { group:'Other', items:[
       { path:'/booking', label:'Lab booking' },
