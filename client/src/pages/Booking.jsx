@@ -172,7 +172,11 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
     onRefresh();
   };
 
-  const userBookings = allSlots.filter(s => s.lab_id===lab.id && (user.role==='student' ? s.user_id===user.id || s.user_name===user.name : true));
+  const userBookings = allSlots.filter(s => s.lab_id===lab.id && (
+    (user.role==='student' || user.role==='invigilator')
+      ? s.user_id===user.id || s.user_name===user.name
+      : true
+  ));
 
   return (
     <div>
@@ -276,7 +280,9 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
                             {(user.role==='admin'||user.role==='staff') && (
                               <button onClick={()=>checkin(slot.id)} style={{ background:'#eefbf3', border:'1px solid #bce8cc', color:'#0f9d58', borderRadius:7, padding:'4px 10px', fontSize:12, cursor:'pointer', fontWeight:600 }}>Check in</button>
                             )}
-                            <button onClick={()=>cancel(slot.id)} style={{ background:'none', border:'1px solid #f5bcbc', color:'#dc2626', borderRadius:7, padding:'4px 10px', fontSize:12, cursor:'pointer' }}>Cancel</button>
+                            {(user.role==='admin'||user.role==='staff'||slot.user_id===user.id) && (
+                          <button onClick={()=>cancel(slot.id)} style={{ background:'none', border:'1px solid #f5bcbc', color:'#dc2626', borderRadius:7, padding:'4px 10px', fontSize:12, cursor:'pointer' }}>Cancel</button>
+                        )}
                           </div>
                         )}
                       </td>
