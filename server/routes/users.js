@@ -25,7 +25,7 @@ router.post('/', checkRole('admin'), async (req, res) => {
       `INSERT INTO users (name, email, password, role, department)
        VALUES ($1,$2,$3,$4,$5)
        RETURNING id, name, email, role, department, is_active, created_at`,
-      [name, email, hashed, role||'student', role==='staff'?department:null]
+      [name, email, hashed, role||'student', (role==='staff'||role==='student')?department:null]
     );
     await auditLog(req.user.id, 'CREATE', 'users', rows[0].id, `Created user: ${name}`);
     res.status(201).json({ success: true, data: rows[0] });
@@ -41,7 +41,7 @@ router.put('/:id', checkRole('admin'), async (req, res) => {
     const { rows } = await pool.query(
       `UPDATE users SET name=$1, role=$2, department=$3, is_active=$4 WHERE id=$5
        RETURNING id, name, email, role, department, is_active`,
-      [name, role, role==='staff'?department:null, is_active, req.params.id]
+      [name, role, (role==='staff'||role==='student')?department:null, is_active, req.params.id]
     );
     await auditLog(req.user.id, 'UPDATE', 'users', req.params.id, `Updated: ${name}`);
     res.json({ success: true, data: rows[0] });

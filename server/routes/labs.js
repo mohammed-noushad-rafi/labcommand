@@ -7,7 +7,7 @@ const auditLog    = require('../utils/auditLog');
 router.use(verifyToken);
 
 router.get('/departments', async (req, res) => {
-  const staffDept = req.user?.role === 'staff' ? req.user?.department : null;
+  const staffDept = (req.user?.role === 'staff' || req.user?.role === 'student') ? req.user?.department : null;
   try {
     const query = staffDept
       ? `SELECT department,

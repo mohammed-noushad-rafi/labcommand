@@ -15,7 +15,10 @@ router.get('/', async (req, res) => {
              JOIN labs l ON s.lab_id = l.id
              JOIN users u ON s.user_id = u.id`;
     const params = [];
-    if (role === 'student') { params.push(id); q += ` WHERE s.user_id=$1`; }
+    if (role === 'student') {
+      params.push(id);
+      q += ` WHERE s.user_id=$1`;
+    }
     q += ' ORDER BY s.date DESC, s.start_time DESC';
     const { rows } = await pool.query(q, params);
     res.json({ success: true, data: rows });

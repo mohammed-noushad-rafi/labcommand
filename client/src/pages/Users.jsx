@@ -35,7 +35,7 @@ export default function Users() {
 
   const save = async () => {
     if (!form.name||!form.email||!form.password) return alert('Please fill all required fields');
-    if (form.role==='staff' && !form.department) return alert('Please assign a department for staff');
+    if ((form.role==='staff'||form.role==='student') && !form.department) return alert('Please assign a department');
     try {
       await api.post('/users', form);
       setModal(false); setForm(emptyForm); load();
@@ -43,7 +43,7 @@ export default function Users() {
   };
 
   const update = async () => {
-    if (editForm.role==='staff' && !editForm.department) return alert('Please assign a department for staff');
+    if ((editForm.role==='staff'||editForm.role==='student') && !editForm.department) return alert('Please assign a department');
     try {
       await api.put('/users/'+editForm.id, editForm);
       setEditModal(false); load();
@@ -207,7 +207,7 @@ export default function Users() {
                     <option value="admin">Admin</option>
                   </select>
                 </div>
-                {form.role === 'staff' && (
+                {(form.role === 'staff' || form.role === 'student') && (
                   <div>
                     <label style={lbl}>Department *</label>
                     <select value={form.department} onChange={e=>setForm({...form,department:e.target.value})} style={inp}>
@@ -250,7 +250,7 @@ export default function Users() {
                     <option value="admin">Admin</option>
                   </select>
                 </div>
-                {editForm.role==='staff' && (
+                {(editForm.role==='staff' || editForm.role==='student') && (
                   <div>
                     <label style={lbl}>Department *</label>
                     <select value={editForm.department||''} onChange={e=>setEditForm({...editForm,department:e.target.value})} style={inp}>
