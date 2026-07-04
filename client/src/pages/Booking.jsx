@@ -53,10 +53,7 @@ function DeptLevel({ departments, slots, onSelect }) {
               onMouseLeave={e => { e.currentTarget.style.borderColor='#ebebf0'; e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
               <div style={{ fontSize:34, marginBottom:18 }}>{meta.icon}</div>
               <div style={{ fontSize:18, fontWeight:700, color:'#16161f', marginBottom:4 }}>{d.department}</div>
-              <div style={{ fontSize:12, color:'#bbb', marginBottom:16 }}>{d.lab_count} lab{d.lab_count>1?'s':''}</div>
-              <div style={{ fontSize:11, color:todaySlots.length>0?'#d97706':'#0f9d58', fontWeight:600 }}>
-                {todaySlots.length>0 ? todaySlots.length+' booking'+( todaySlots.length>1?'s':'')+' today' : '✓ Available today'}
-              </div>
+              <div style={{ fontSize:12, color:'#bbb', fontWeight:500 }}>{d.lab_count} lab{d.lab_count>1?'s':''}</div>
             </div>
           );
         })}

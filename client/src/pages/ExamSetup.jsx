@@ -66,20 +66,7 @@ function DeptLevel({ departments, sessions, onSelect }) {
               onMouseLeave={e => { e.currentTarget.style.borderColor=active>0?'#f5bcbc':'#ebebf0'; e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
               <div style={{ fontSize:34, marginBottom:18 }}>{meta.icon}</div>
               <div style={{ fontSize:18, fontWeight:700, color:'#16161f', marginBottom:4 }}>{d.department}</div>
-              <div style={{ fontSize:12, color:'#bbb', marginBottom:8 }}>{d.lab_count} lab{d.lab_count>1?'s':''}</div>
-              <div style={{ marginBottom:12 }}>
-                <span style={{ fontSize:10.5, fontWeight:600, padding:'3px 8px', borderRadius:6,
-                  background: meta.hasComputers ? '#eef2ff' : '#f5f5f7',
-                  color: meta.hasComputers ? '#4f46e5' : '#9494a3' }}>
-                  {meta.hasComputers ? '🖥️ Full monitoring' : '📋 Schedule only'}
-                </span>
-              </div>
-              <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
-                {active>0    && <span style={{ fontSize:11, color:'#dc2626', fontWeight:700 }}>🔴 {active} live</span>}
-                {scheduled>0 && <span style={{ fontSize:11, color:'#2563eb', fontWeight:600 }}>{scheduled} scheduled</span>}
-                {completed>0 && <span style={{ fontSize:11, color:'#9494a3', fontWeight:500 }}>{completed} completed</span>}
-                {deptSessions.length===0 && <span style={{ fontSize:11, color:'#bbb' }}>No sessions yet</span>}
-              </div>
+              <div style={{ fontSize:12, color:'#bbb', fontWeight:500 }}>{d.lab_count} lab{d.lab_count>1?'s':''}</div>
             </div>
           );
         })}

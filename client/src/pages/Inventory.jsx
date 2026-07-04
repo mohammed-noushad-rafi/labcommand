@@ -96,13 +96,7 @@ function DeptLevel({ departments, inventory, onSelect }) {
               onMouseLeave={e => { e.currentTarget.style.borderColor=lowItems>0?'#f5bcbc':'#ebebf0'; e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
               <div style={{ fontSize:34, marginBottom:18 }}>{meta.icon}</div>
               <div style={{ fontSize:18, fontWeight:700, color:'#16161f', marginBottom:4 }}>{d.department}</div>
-              <div style={{ fontSize:12, color:'#bbb', marginBottom:16 }}>{d.lab_count} lab{d.lab_count>1?'s':''} · {totalItems} items</div>
-              {lowItems > 0
-                ? <span style={{ fontSize:11, color:'#dc2626', fontWeight:700 }}>⚠ {lowItems} low stock</span>
-                : totalItems > 0
-                  ? <span style={{ fontSize:11, color:'#0f9d58', fontWeight:600 }}>✓ All stocked</span>
-                  : <span style={{ fontSize:11, color:'#bbb' }}>No items yet</span>
-              }
+              <div style={{ fontSize:12, color:'#bbb', fontWeight:500 }}>{d.lab_count} lab{d.lab_count>1?'s':''}</div>
             </div>
           );
         })}
