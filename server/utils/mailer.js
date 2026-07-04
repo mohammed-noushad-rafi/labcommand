@@ -35,3 +35,60 @@ async function sendBookingNotification({ lab_name, user_name, date, start_time, 
 }
 
 module.exports = { sendBookingNotification };
+
+async function sendWelcomeEmail({ name, email, password, role, department }) {
+  const deptText = department ? ` (${department} Department)` : '';
+  const roleLabel = role.charAt(0).toUpperCase() + role.slice(1);
+  const html = `
+    <div style="font-family:sans-serif;max-width:520px;margin:0 auto;border:1px solid #e9e9f0;border-radius:12px;overflow:hidden">
+      <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:24px 28px">
+        <h2 style="color:#fff;margin:0;font-size:20px">LabCommand</h2>
+        <p style="color:rgba(255,255,255,0.8);margin:6px 0 0;font-size:13px">Your account has been created</p>
+      </div>
+      <div style="padding:24px 28px;background:#fff">
+        <p style="color:#333;font-size:14px;margin:0 0 20px">Hi <strong>${name}</strong>, welcome to LabCommand!</p>
+        <p style="color:#555;font-size:13px;margin:0 0 20px">Your account has been set up. Here are your login credentials:</p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
+          <tr style="border-bottom:1px solid #f0f0f0">
+            <td style="padding:10px 0;color:#888;width:120px">Name</td>
+            <td style="padding:10px 0;font-weight:600;color:#111">${name}</td>
+          </tr>
+          <tr style="border-bottom:1px solid #f0f0f0">
+            <td style="padding:10px 0;color:#888">Email</td>
+            <td style="padding:10px 0;font-weight:600;color:#111">${email}</td>
+          </tr>
+          <tr style="border-bottom:1px solid #f0f0f0">
+            <td style="padding:10px 0;color:#888">Password</td>
+            <td style="padding:10px 0;font-weight:600;color:#4f46e5;font-size:16px;letter-spacing:1px">${password}</td>
+          </tr>
+          <tr style="border-bottom:1px solid #f0f0f0">
+            <td style="padding:10px 0;color:#888">Role</td>
+            <td style="padding:10px 0;font-weight:600;color:#111">${roleLabel}${deptText}</td>
+          </tr>
+        </table>
+        <div style="margin-top:20px;padding:12px 16px;background:#f5f4fe;border-radius:8px;border-left:4px solid #4f46e5">
+          <p style="margin:0;font-size:13px;color:#4f46e5;font-weight:500">
+            Login at: <a href="http://localhost:5173" style="color:#4f46e5">LabCommand Portal</a>
+          </p>
+          <p style="margin:6px 0 0;font-size:12px;color:#7c7c8a">Please change your password after first login.</p>
+        </div>
+      </div>
+      <div style="padding:14px 28px;background:#fafafd;border-top:1px solid #f0f0f6">
+        <p style="margin:0;font-size:12px;color:#aaa">LabCommand — AI-Assisted Lab Network Management System</p>
+      </div>
+    </div>`;
+
+  try {
+    await transporter.sendMail({
+      from: '"LabCommand" <' + process.env.EMAIL_USER + '>',
+      to: email,
+      subject: 'Welcome to LabCommand — Your Login Credentials',
+      html,
+    });
+    console.log('[Mailer] Welcome email sent to', email);
+  } catch (err) {
+    console.error('[Mailer] Welcome email failed:', err.message);
+  }
+}
+
+module.exports = { sendBookingNotification, sendWelcomeEmail };

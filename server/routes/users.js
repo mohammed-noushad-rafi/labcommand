@@ -5,6 +5,7 @@ const bcrypt      = require('bcryptjs');
 const verifyToken = require('../middleware/verifyToken');
 const checkRole   = require('../middleware/checkRole');
 const auditLog    = require('../utils/auditLog');
+const { sendWelcomeEmail } = require('../utils/mailer');
 
 router.use(verifyToken);
 
@@ -28,6 +29,10 @@ router.post('/', checkRole('admin'), async (req, res) => {
       [name, email, hashed, role||'student', (role==='staff'||role==='student')?department:null]
     );
     await auditLog(req.user.id, 'CREATE', 'users', rows[0].id, `Created user: ${name}`);
+
+    // Send welcome email with credentials
+    sendWelcomeEmail({ name, email, password, role, department });
+
     res.status(201).json({ success: true, data: rows[0] });
   } catch (err) {
     if (err.code === '23505') return res.status(400).json({ success: false, message: 'Email already exists' });
