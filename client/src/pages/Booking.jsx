@@ -128,7 +128,10 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
   const [date,       setDate]       = useState(today());
   const [myBookings, setMyBookings] = useState([]);
   const [modal,      setModal]      = useState(false);
-  const [form,       setForm]       = useState({ lab_id:lab.id, date:today(), start_time:'', end_time:'', purpose:'' });
+  const [users,      setUsers]      = useState([]);
+  const [form,       setForm]       = useState({ lab_id:lab.id, date:today(), start_time:'', end_time:'', purpose:'', assigned_to:'', assigned_name:'', notes:'' });
+  const [userSearch, setUserSearch] = useState('');
+  const [showUsers,  setShowUsers]  = useState(false);
   const [loading,    setLoading]    = useState(false);
   const [purposeInput, setPurposeInput] = useState('');
 
@@ -253,7 +256,7 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
           <div style={{ background:'#fff', border:'1px solid #ebebf0', borderRadius:14, overflow:'hidden' }}>
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
               <thead>
-                <tr>{['Date','Time','Purpose','Booked by','Status',''].map(h=>(
+                <tr>{['Date','Time','Purpose','Booked by','Assigned to','Status',''].map(h=>(
                   <th key={h} style={{ textAlign:'left', padding:'10px 14px', color:'#bbb', fontWeight:600, fontSize:10.5, textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #f0f0f6', background:'#fafafd' }}>{h}</th>
                 ))}</tr>
               </thead>
@@ -266,6 +269,11 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
                       <td style={{ ...td, color:'#9494a3', fontWeight:500 }}>{slot.start_time} – {slot.end_time}</td>
                       <td style={{ ...td, color:'#555' }}>{slot.purpose||'—'}</td>
                       <td style={{ ...td, color:'#9494a3' }}>{slot.user_name}</td>
+                      <td style={td}>
+                        {slot.assigned_to_name
+                          ? <span style={{ fontSize:12, color:'#4f46e5', fontWeight:600 }}>→ {slot.assigned_to_name}</span>
+                          : <span style={{ fontSize:12, color:'#bbb' }}>—</span>}
+                      </td>
                       <td style={td}>
                         <span style={{ padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:ss.bg, color:ss.color, border:'1px solid '+ss.border }}>
                           {slot.status?.replace('_',' ')}
@@ -333,6 +341,45 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
                 </div>
                 <input value={purposeInput} onChange={e=>setPurposeInput(e.target.value)} placeholder="Or type custom purpose..." style={inp}/>
               </div>
+
+              {(user.role==='admin'||user.role==='staff') && (
+                <div>
+                  <label style={lbl}>Assign to (optional)</label>
+                  <div style={{ position:'relative' }}>
+                    <input value={userSearch}
+                      onChange={e => { setUserSearch(e.target.value); setShowUsers(true); setForm({...form, assigned_to:'', assigned_name:''}); }}
+                      onFocus={() => setShowUsers(true)}
+                      placeholder="Search student or faculty by name..."
+                      style={inp}/>
+                    {showUsers && userSearch.length > 0 && (
+                      <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'#fff', border:'1px solid #ebebf0', borderRadius:10, boxShadow:'0 8px 24px rgba(16,16,31,0.1)', zIndex:300, maxHeight:180, overflowY:'auto', marginTop:4 }}>
+                        {users.filter(u => u.name.toLowerCase().includes(userSearch.toLowerCase()) && u.is_active).map(u => (
+                          <div key={u.id} onClick={() => { setUserSearch(u.name); setForm({...form, assigned_to:u.id, assigned_name:u.name}); setShowUsers(false); }}
+                            style={{ padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid #f7f7fb' }}
+                            onMouseEnter={e => e.currentTarget.style.background='#f7f7ff'}
+                            onMouseLeave={e => e.currentTarget.style.background=''}>
+                            <div style={{ fontSize:13, fontWeight:500, color:'#16161f' }}>{u.name}</div>
+                            <div style={{ fontSize:11, color:'#bbb' }}>{u.role}{u.department?' · '+u.department:''}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {form.assigned_to && (
+                    <div style={{ background:'#eef2ff', border:'1px solid #c7d2fe', borderRadius:8, padding:'8px 12px', marginTop:6, fontSize:12, color:'#4f46e5', fontWeight:600 }}>
+                      ✓ Assigned to {form.assigned_name}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <label style={lbl}>Notes (optional)</label>
+                <input value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Any additional notes..." style={inp}/>
+              </div>
+
+              <div style={{ display:'none' }}
+              </div>
             </div>
             <div style={{ display:'flex', gap:10, marginTop:24, justifyContent:'flex-end' }}>
               <button onClick={()=>setModal(false)} style={{ background:'none', border:'1px solid #ebebf0', borderRadius:10, padding:'10px 18px', fontSize:13, cursor:'pointer', color:'#555' }}>Cancel</button>
@@ -361,7 +408,10 @@ export default function Booking() {
       api.get('/booking').then(r => setSlots(r.data.data||[])),
     ]).finally(() => setLoading(false));
   };
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    loadAll();
+    api.get('/users').then(r => setUsers(r.data.data||[])).catch(()=>{});
+  }, []);
 
   if (loading) return <div style={{ padding:60, textAlign:'center', color:'#c4c4cc', fontSize:13 }}>Loading</div>;
 

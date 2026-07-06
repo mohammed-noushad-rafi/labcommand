@@ -9,7 +9,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-async function sendBookingNotification({ lab_name, user_name, date, start_time, end_time, purpose, recipients }) {
+async function sendBookingNotification({ lab_name, user_name, date, start_time, end_time, purpose, assigned_to, recipients }) {
   const formatted_date = new Date(date).toLocaleDateString('en-IN', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });

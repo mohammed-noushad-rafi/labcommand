@@ -10,10 +10,12 @@ router.use(verifyToken);
 router.get('/', async (req, res) => {
   try {
     const { role, id } = req.user;
-    let q = `SELECT s.*, l.name as lab_name, u.name as user_name
+    let q = `SELECT s.*, l.name as lab_name, u.name as user_name,
+             a.name as assigned_to_name
              FROM slots s
              JOIN labs l ON s.lab_id = l.id
-             JOIN users u ON s.user_id = u.id`;
+             JOIN users u ON s.user_id = u.id
+             LEFT JOIN users a ON s.assigned_to = a.id`;
     const params = [];
     if (role === 'student') {
       params.push(id);
@@ -27,7 +29,7 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { lab_id, date, start_time, end_time, purpose } = req.body;
+    const { lab_id, date, start_time, end_time, purpose, assigned_to, assigned_name, notes } = req.body;
 
     const conflict = await pool.query(
       `SELECT id FROM slots WHERE lab_id=$1 AND date=$2
@@ -43,9 +45,9 @@ router.post('/', async (req, res) => {
     const labName = lab.rows[0]?.name || 'Lab';
 
     const { rows } = await pool.query(
-      `INSERT INTO slots (lab_id, user_id, date, start_time, end_time, purpose)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [lab_id, req.user.id, date, start_time, end_time, purpose]
+      `INSERT INTO slots (lab_id, user_id, date, start_time, end_time, purpose, assigned_to, assigned_name, notes)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [lab_id, req.user.id, date, start_time, end_time, purpose, assigned_to||null, assigned_name||null, notes||null]
     );
 
     await auditLog(req.user.id, 'CREATE', 'slots', rows[0].id, `Booked ${labName} on ${date}`);
@@ -64,12 +66,22 @@ router.post('/', async (req, res) => {
     // Send email to all users
     const allUsers = await pool.query('SELECT email FROM users WHERE is_active=true');
     const recipients = allUsers.rows.map(u => u.email).filter(Boolean);
+    // If assigned to someone, add their email to recipients
+    let finalRecipients = [...recipients];
+    if (assigned_to) {
+      const assignedUser = await pool.query('SELECT email FROM users WHERE id=$1', [assigned_to]);
+      if (assignedUser.rows[0]?.email && !finalRecipients.includes(assignedUser.rows[0].email)) {
+        finalRecipients.push(assignedUser.rows[0].email);
+      }
+    }
+
     sendBookingNotification({
       lab_name: labName,
       user_name: req.user.name,
       date, start_time, end_time,
       purpose: purpose || '',
-      recipients,
+      assigned_to: assigned_name || null,
+      recipients: finalRecipients,
     });
 
     res.status(201).json({ success: true, data: rows[0] });
