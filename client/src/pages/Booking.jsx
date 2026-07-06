@@ -130,8 +130,9 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
   const [modal,      setModal]      = useState(false);
   const [users,      setUsers]      = useState([]);
   const [form,       setForm]       = useState({ lab_id:lab.id, date:today(), start_time:'', end_time:'', purpose:'', assigned_to:'', assigned_name:'', notes:'' });
-  const [userSearch, setUserSearch] = useState('');
-  const [showUsers,  setShowUsers]  = useState(false);
+  const [userSearch,   setUserSearch]   = useState('');
+  const [showUsers,    setShowUsers]    = useState(false);
+  const [assignedUser, setAssignedUser] = useState(null);
   const [loading,    setLoading]    = useState(false);
   const [purposeInput, setPurposeInput] = useState('');
 
@@ -154,7 +155,12 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
     if (!purpose) return alert('Please enter purpose');
     setLoading(true);
     try {
-      await api.post('/booking', { ...form, purpose });
+      await api.post('/booking', {
+        ...form,
+        purpose,
+        assigned_to: assignedUser?.id || null,
+        assigned_name: assignedUser?.name || null,
+      });
       setModal(false);
       onRefresh();
     } catch (err) { alert(err.response?.data?.message||'Error'); }
@@ -354,7 +360,7 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
                     {showUsers && userSearch.length > 0 && (
                       <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'#fff', border:'1px solid #ebebf0', borderRadius:10, boxShadow:'0 8px 24px rgba(16,16,31,0.1)', zIndex:300, maxHeight:180, overflowY:'auto', marginTop:4 }}>
                         {users.filter(u => u.name.toLowerCase().includes(userSearch.toLowerCase()) && u.is_active).map(u => (
-                          <div key={u.id} onClick={() => { setUserSearch(u.name); setForm({...form, assigned_to:u.id, assigned_name:u.name}); setShowUsers(false); }}
+                          <div key={u.id} onClick={() => { setUserSearch(u.name); setAssignedUser(u); setShowUsers(false); }}
                             style={{ padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid #f7f7fb' }}
                             onMouseEnter={e => e.currentTarget.style.background='#f7f7ff'}
                             onMouseLeave={e => e.currentTarget.style.background=''}>
@@ -365,9 +371,10 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
                       </div>
                     )}
                   </div>
-                  {form.assigned_to && (
-                    <div style={{ background:'#eef2ff', border:'1px solid #c7d2fe', borderRadius:8, padding:'8px 12px', marginTop:6, fontSize:12, color:'#4f46e5', fontWeight:600 }}>
-                      ✓ Assigned to {form.assigned_name}
+                  {assignedUser && (
+                    <div style={{ background:'#eef2ff', border:'1px solid #c7d2fe', borderRadius:8, padding:'8px 12px', marginTop:6, fontSize:12, color:'#4f46e5', fontWeight:600, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      <span>✓ Assigned to {assignedUser.name} ({assignedUser.role})</span>
+                      <button onClick={()=>{setAssignedUser(null);setUserSearch('');}} style={{ background:'none', border:'none', cursor:'pointer', color:'#9494a3', fontSize:14 }}>×</button>
                     </div>
                   )}
                 </div>
