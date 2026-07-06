@@ -378,8 +378,7 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
                 <input value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Any additional notes..." style={inp}/>
               </div>
 
-              <div style={{ display:'none' }}
-              </div>
+
             </div>
             <div style={{ display:'flex', gap:10, marginTop:24, justifyContent:'flex-end' }}>
               <button onClick={()=>setModal(false)} style={{ background:'none', border:'1px solid #ebebf0', borderRadius:10, padding:'10px 18px', fontSize:13, cursor:'pointer', color:'#555' }}>Cancel</button>
