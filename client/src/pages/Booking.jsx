@@ -351,30 +351,39 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
               {(user.role==='admin'||user.role==='staff') && (
                 <div>
                   <label style={lbl}>Assign to (optional)</label>
-                  <div style={{ position:'relative' }}>
-                    <input value={userSearch}
-                      onChange={e => { setUserSearch(e.target.value); setShowUsers(true); setForm({...form, assigned_to:'', assigned_name:''}); }}
-                      onFocus={() => setShowUsers(true)}
-                      placeholder="Search student or faculty by name..."
-                      style={inp}/>
-                    {showUsers && userSearch.length > 0 && (
-                      <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'#fff', border:'1px solid #ebebf0', borderRadius:10, boxShadow:'0 8px 24px rgba(16,16,31,0.1)', zIndex:300, maxHeight:180, overflowY:'auto', marginTop:4 }}>
-                        {users.filter(u => u.name.toLowerCase().includes(userSearch.toLowerCase()) && u.is_active).map(u => (
-                          <div key={u.id} onClick={() => { setUserSearch(u.name); setAssignedUser(u); setShowUsers(false); }}
-                            style={{ padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid #f7f7fb' }}
-                            onMouseEnter={e => e.currentTarget.style.background='#f7f7ff'}
-                            onMouseLeave={e => e.currentTarget.style.background=''}>
-                            <div style={{ fontSize:13, fontWeight:500, color:'#16161f' }}>{u.name}</div>
-                            <div style={{ fontSize:11, color:'#bbb' }}>{u.role}{u.department?' · '+u.department:''}</div>
-                          </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                    <div>
+                      <label style={{ fontSize:11, color:'#bbb', display:'block', marginBottom:5 }}>Department</label>
+                      <select value={userSearch} onChange={e=>{setUserSearch(e.target.value);setAssignedUser(null);}}
+                        style={{ ...inp, color: userSearch?'#16161f':'#bbb' }}>
+                        <option value="">Select department</option>
+                        <option value="Computer Science">🖥️ Computer Science</option>
+                        <option value="Physics">⚛️ Physics</option>
+                        <option value="Chemistry">🧪 Chemistry</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize:11, color:'#bbb', display:'block', marginBottom:5 }}>Person</label>
+                      <select value={assignedUser?.id||''} onChange={e=>{
+                        const u = users.find(u=>u.id===parseInt(e.target.value));
+                        setAssignedUser(u||null);
+                      }} disabled={!userSearch}
+                        style={{ ...inp, color: assignedUser?'#16161f':'#bbb', opacity:userSearch?1:0.5 }}>
+                        <option value="">{userSearch?'Select person':'Select dept first'}</option>
+                        {users.filter(u=>u.department===userSearch&&u.is_active&&u.role!=='admin').map(u=>(
+                          <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
                         ))}
-                      </div>
-                    )}
+                      </select>
+                    </div>
                   </div>
                   {assignedUser && (
-                    <div style={{ background:'#eef2ff', border:'1px solid #c7d2fe', borderRadius:8, padding:'8px 12px', marginTop:6, fontSize:12, color:'#4f46e5', fontWeight:600, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                      <span>✓ Assigned to {assignedUser.name} ({assignedUser.role})</span>
-                      <button onClick={()=>{setAssignedUser(null);setUserSearch('');}} style={{ background:'none', border:'none', cursor:'pointer', color:'#9494a3', fontSize:14 }}>×</button>
+                    <div style={{ background:'#eef2ff', border:'1px solid #c7d2fe', borderRadius:8, padding:'10px 14px', marginTop:8, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:600, color:'#4f46e5' }}>✓ {assignedUser.name}</div>
+                        <div style={{ fontSize:11, color:'#9494a3', marginTop:2 }}>{assignedUser.role} · {assignedUser.department}</div>
+                      </div>
+                      <button onClick={()=>{setAssignedUser(null);setUserSearch('');}}
+                        style={{ background:'none', border:'none', cursor:'pointer', color:'#bbb', fontSize:18, lineHeight:1 }}>×</button>
                     </div>
                   )}
                 </div>
