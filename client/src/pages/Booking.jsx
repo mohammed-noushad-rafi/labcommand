@@ -370,7 +370,7 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
                       }} disabled={!userSearch}
                         style={{ ...inp, color: assignedUser?'#16161f':'#bbb', opacity:userSearch?1:0.5 }}>
                         <option value="">{userSearch?'Select person':'Select dept first'}</option>
-                        {users.filter(u=>u.department===userSearch&&u.is_active&&u.role!=='admin').map(u=>(
+                        {users.filter(u=>u.department===userSearch&&u.is_active&&['student','invigilator'].includes(u.role)).map(u=>(
                           <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
                         ))}
                       </select>
