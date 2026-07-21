@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
+import { sortDepts } from '../utils/deptOrder';
 import { Badge } from '../components/Table';
 import Button from '../components/Button';
 
@@ -44,12 +45,29 @@ const CATEGORY_CATALOG = {
   ],
 };
 
-function generateSerial(dept, labName) {
+// Generates the next serial number for a lab, in the form CS-L01-001.
+// Scans existing serials in this lab, finds the smallest unused sequence
+// number (so a deleted item's number gets reused by the next new item),
+// rather than a random or ever-increasing suffix.
+function generateSerial(dept, labName, existingEquip) {
   const prefix = dept === 'Computer Science' ? 'CS' : dept === 'Physics' ? 'PH' : 'CH';
-  const labNum = labName.match(/d+/) ? labName.match(/d+/)[0] : '1';
-  const rand = Math.random().toString(36).substr(2,4).toUpperCase();
-  const year = new Date().getFullYear().toString().substr(2);
-  return prefix + '-L' + labNum + '-' + year + '-' + rand;
+  const labNumMatch = labName.match(/\d+/);
+  const labNum = labNumMatch ? labNumMatch[0] : '1';
+  const labCode = 'L' + String(labNum).padStart(2, '0');
+  const serialPrefix = `${prefix}-${labCode}-`;
+
+  const used = new Set();
+  (existingEquip || []).forEach(item => {
+    if (item.serial_number && item.serial_number.startsWith(serialPrefix)) {
+      const n = parseInt(item.serial_number.slice(serialPrefix.length), 10);
+      if (!isNaN(n)) used.add(n);
+    }
+  });
+
+  let n = 1;
+  while (used.has(n)) n++;
+
+  return serialPrefix + String(n).padStart(3, '0');
 }
 
 function getMeta(name) {
@@ -189,6 +207,7 @@ function LabEquipment({ lab, dept, equipment, onBack, onBackToDept, onRefresh })
   const [editing,  setEditing]  = useState(null);
   const [nameInput,setNameInput]= useState('');
   const [showSugg, setShowSugg] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [form,     setForm]     = useState({
     lab_id: lab.id, name:'', category:'', serial_number:'',
     status:'working', purchase_date:'', last_service_date:'',
@@ -202,12 +221,14 @@ function LabEquipment({ lab, dept, equipment, onBack, onBackToDept, onRefresh })
     setForm({ lab_id:lab.id, name:'', category:'', serial_number:serial, status:'working', purchase_date:'', last_service_date:'', warranty_expiry_date:'', amc_vendor:'', amc_expiry_date:'' });
     setNameInput('');
     setEditing(null);
+    setShowAdvanced(false);
     setModal(true);
   };
 
   const openEdit = (item) => {
     setForm({ ...item, purchase_date:item.purchase_date?.split('T')[0]||'', last_service_date:item.last_service_date?.split('T')[0]||'', warranty_expiry_date:item.warranty_expiry_date?.split('T')[0]||'', amc_expiry_date:item.amc_expiry_date?.split('T')[0]||'' });
     setNameInput(item.name);
+    setShowAdvanced(!!(item.last_service_date || item.amc_vendor || item.amc_expiry_date));
     setEditing(item.id);
     setModal(true);
   };
@@ -398,22 +419,33 @@ function LabEquipment({ lab, dept, equipment, onBack, onBackToDept, onRefresh })
                   <input type="date" value={form.purchase_date} onChange={e=>setForm({...form,purchase_date:e.target.value})} style={inp}/>
                 </div>
                 <div>
-                  <label style={label}>Last service date</label>
-                  <input type="date" value={form.last_service_date} onChange={e=>setForm({...form,last_service_date:e.target.value})} style={inp}/>
-                </div>
-                <div>
                   <label style={label}>Warranty expiry</label>
                   <input type="date" value={form.warranty_expiry_date} onChange={e=>setForm({...form,warranty_expiry_date:e.target.value})} style={inp}/>
                 </div>
-                <div>
-                  <label style={label}>AMC vendor</label>
-                  <input value={form.amc_vendor||''} onChange={e=>setForm({...form,amc_vendor:e.target.value})} placeholder="Vendor name" style={inp}/>
-                </div>
-                <div>
-                  <label style={label}>AMC expiry</label>
-                  <input type="date" value={form.amc_expiry_date||''} onChange={e=>setForm({...form,amc_expiry_date:e.target.value})} style={inp}/>
-                </div>
               </div>
+
+              <button type="button" onClick={()=>setShowAdvanced(!showAdvanced)}
+                style={{ background:'none', border:'none', padding:0, color:'#4f46e5', fontSize:12.5, fontWeight:600, cursor:'pointer', textAlign:'left', display:'flex', alignItems:'center', gap:5 }}>
+                <span style={{ display:'inline-block', transition:'transform .15s', transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
+                {showAdvanced ? 'Hide' : 'Add'} AMC & service details (optional)
+              </button>
+
+              {showAdvanced && (
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, background:'#fafafd', border:'1px solid #ebebf0', borderRadius:10, padding:14 }}>
+                  <div>
+                    <label style={label}>Last service date</label>
+                    <input type="date" value={form.last_service_date} onChange={e=>setForm({...form,last_service_date:e.target.value})} style={inp}/>
+                  </div>
+                  <div>
+                    <label style={label}>AMC vendor</label>
+                    <input value={form.amc_vendor||''} onChange={e=>setForm({...form,amc_vendor:e.target.value})} placeholder="Vendor name" style={inp}/>
+                  </div>
+                  <div>
+                    <label style={label}>AMC expiry</label>
+                    <input type="date" value={form.amc_expiry_date||''} onChange={e=>setForm({...form,amc_expiry_date:e.target.value})} style={inp}/>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div style={{ display:'flex', gap:10, marginTop:28, justifyContent:'flex-end' }}>
@@ -438,7 +470,7 @@ export default function Equipment() {
 
   const loadAll = () => {
     Promise.all([
-      api.get('/labs/departments').then(r => setDepartments(r.data.data || [])),
+      api.get('/labs/departments').then(r => setDepartments(sortDepts(r.data.data || []))),
       api.get('/equipment').then(r => setEquipment(r.data.data || [])),
     ]).finally(() => setLoading(false));
   };

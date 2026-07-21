@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
+import { API_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
 
 export default function BookingToast() {
@@ -10,7 +11,7 @@ export default function BookingToast() {
   useEffect(() => {
     if (!user) return;
     const token = localStorage.getItem('token');
-    socketRef.current = io('http://localhost:3001', { auth: { token } });
+    socketRef.current = io(API_URL, { auth: { token } });
 
     socketRef.current.on('booking:new', (data) => {
       const id = Date.now();

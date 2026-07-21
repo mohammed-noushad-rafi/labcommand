@@ -1,9 +1,11 @@
 const express     = require('express');
 const router      = express.Router();
 const verifyToken = require('../middleware/verifyToken');
+const checkRole   = require('../middleware/checkRole');
 const auditLog    = require('../utils/auditLog');
 
 router.use(verifyToken);
+router.use(checkRole('admin', 'staff'));
 
 router.post('/:machineId', async (req, res) => {
   try {

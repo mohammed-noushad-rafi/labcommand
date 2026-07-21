@@ -8,6 +8,23 @@ const auditLog    = require('../utils/auditLog');
 const { sendWelcomeEmail } = require('../utils/mailer');
 
 router.use(verifyToken);
+router.get('/assignable', checkRole('admin', 'staff'), async (req, res) => {
+  try {
+    const { role, department } = req.user;
+    let q = `SELECT id, name, role, department FROM users
+              WHERE is_active = true AND role IN ('student', 'invigilator', 'staff')`;
+    const params = [];
+
+    if (role === 'staff') {
+      params.push(department);
+      q += ` AND department = $${params.length}`;
+    }
+
+    q += ' ORDER BY department, name';
+    const { rows } = await pool.query(q, params);
+    res.json({ success: true, data: rows });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
 
 router.get('/', checkRole('admin'), async (req, res) => {
   try {

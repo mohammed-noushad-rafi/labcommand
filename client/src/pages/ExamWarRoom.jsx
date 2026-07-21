@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import { API_URL } from '../config';
 import api from '../api/axios';
 
 const VIOLATION_LABELS = {
@@ -9,6 +10,8 @@ const VIOLATION_LABELS = {
   clipboard_paste:    { label:'Clipboard paste',  color:'#f87171' },
   devtools_open:      { label:'DevTools opened',  color:'#fb7185' },
   new_process:        { label:'New process',      color:'#fb7185' },
+  usb_device:         { label:'USB device',       color:'#f472b6' },
+  multi_monitor:      { label:'Multi-monitor',    color:'#fb923c' },
   concurrent_session: { label:'Dual login',       color:'#c4b5fd' },
   inactivity:         { label:'Inactivity',       color:'#94a3b8' },
   right_click:        { label:'Right click',      color:'#94a3b8' },
@@ -32,6 +35,8 @@ export default function ExamWarRoom() {
   const [scores,  setScores]  = useState([]);
   const [events,  setEvents]  = useState([]);
   const [loading, setLoading] = useState(true);
+  const [screenshots, setScreenshots] = useState({}); // machineId -> { image, ts }
+  const [zoomed, setZoomed] = useState(null); // machine_id currently shown enlarged
   const socketRef = useRef(null);
 
   const load = () => {
@@ -47,7 +52,7 @@ export default function ExamWarRoom() {
 
   useEffect(() => {
     load();
-    socketRef.current = io('http://localhost:3001');
+    socketRef.current = io(API_URL);
 
     socketRef.current.on('exam:violation', (data) => {
       if (data.machineId) {
@@ -66,6 +71,10 @@ export default function ExamWarRoom() {
 
     socketRef.current.on('exam:machine_locked', ({ machineId }) => {
       setScores(prev => prev.map(s => s.machine_id === machineId ? { ...s, is_locked: true } : s));
+    });
+
+    socketRef.current.on('exam:screenshot', (data) => {
+      setScreenshots(prev => ({ ...prev, [data.machineId]: { image: data.image, ts: data.ts } }));
     });
 
     return () => socketRef.current?.disconnect();
@@ -151,6 +160,19 @@ export default function ExamWarRoom() {
                       <TrustBadge score={s.trust_score} />
                     </div>
 
+                    {screenshots[s.machine_id] ? (
+                      <img
+                        src={`data:image/jpeg;base64,${screenshots[s.machine_id].image}`}
+                        onClick={()=>setZoomed(s.machine_id)}
+                        style={{ width:'100%', borderRadius:8, marginBottom:8, cursor:'zoom-in', display:'block', border:'1px solid rgba(255,255,255,0.08)' }}
+                        alt="Live screen"
+                      />
+                    ) : (
+                      <div style={{ width:'100%', aspectRatio:'16/10', background:'rgba(255,255,255,0.03)', border:'1px dashed rgba(255,255,255,0.1)', borderRadius:8, marginBottom:8, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10.5, color:'rgba(244,244,248,0.25)' }}>
+                        No live feed yet
+                      </div>
+                    )}
+
                     {s.is_locked && (
                       <div style={s.lockedBanner}>MACHINE LOCKED</div>
                     )}
@@ -202,6 +224,20 @@ export default function ExamWarRoom() {
           </div>
         </div>
       </div>
+
+      {zoomed && screenshots[zoomed] && (
+        <div onClick={()=>setZoomed(null)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', cursor:'zoom-out', padding:40 }}>
+          <div onClick={e=>e.stopPropagation()} style={{ maxWidth:'90vw', maxHeight:'90vh' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+              <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>
+                {scores.find(sc=>sc.machine_id===zoomed)?.student_name || scores.find(sc=>sc.machine_id===zoomed)?.hostname}
+              </div>
+              <button onClick={()=>setZoomed(null)} style={{ background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', borderRadius:8, padding:'6px 12px', cursor:'pointer', fontSize:13 }}>Close ✕</button>
+            </div>
+            <img src={`data:image/jpeg;base64,${screenshots[zoomed].image}`} style={{ maxWidth:'90vw', maxHeight:'80vh', borderRadius:10, border:'1px solid rgba(255,255,255,0.15)', display:'block' }} alt="Live screen enlarged"/>
+          </div>
+        </div>
+      )}
 
       <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }`}</style>
     </div>

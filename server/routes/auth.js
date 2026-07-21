@@ -38,23 +38,9 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.post('/register', async (req, res) => {
-  try {
-    const { name, email, password, role } = req.body;
-    if (!name || !email || !password)
-      return res.status(400).json({ success: false, message: 'All fields required' });
-
-    const hashed = await bcrypt.hash(password, 10);
-    const { rows } = await pool.query(
-      'INSERT INTO users (name, email, password, role) VALUES ($1,$2,$3,$4) RETURNING id, name, email, role',
-      [name, email, hashed, role || 'student']
-    );
-    res.status(201).json({ success: true, user: rows[0] });
-  } catch (err) {
-    if (err.code === '23505')
-      return res.status(400).json({ success: false, message: 'Email already exists' });
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
+// Public self-registration intentionally removed: it's unused by the app
+// (all account creation goes through the admin-gated POST /api/users route
+// in routes/users.js) and previously allowed anyone to self-assign any role,
+// including admin, with no authentication at all.
 
 module.exports = router;

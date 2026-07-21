@@ -231,9 +231,15 @@ export default function Dashboard() {
   const [lab,  setLab]  = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const DEPT_ORDER = ['Computer Science', 'Chemistry', 'Physics'];
+
   useEffect(() => {
     api.get('/labs/departments')
-      .then(r => setDepartments(r.data.data || []))
+      .then(r => {
+        const data = r.data.data || [];
+        data.sort((a, b) => DEPT_ORDER.indexOf(a.department) - DEPT_ORDER.indexOf(b.department));
+        setDepartments(data);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);

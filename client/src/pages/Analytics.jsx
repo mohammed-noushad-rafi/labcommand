@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, CartesianGrid, Legend
 } from 'recharts';
 import api from '../api/axios';
+import { sortDepts } from '../utils/deptOrder';
 
 const DEPT_META = {
   'Computer Science': { icon:'🖥️', color:'#4f46e5', desc:'Programming · Networking · Hardware' },
@@ -324,7 +325,7 @@ export default function Analytics() {
 
   useEffect(() => {
     api.get('/labs/departments')
-      .then(r => setDepartments(r.data.data || []))
+      .then(r => setDepartments(sortDepts(r.data.data || [])))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);

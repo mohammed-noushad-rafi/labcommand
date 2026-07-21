@@ -1,0 +1,8 @@
+python-socketio
+aiohttp
+websockets
+psutil
+python-dotenv
+mss
+Pillow
+screeninfo

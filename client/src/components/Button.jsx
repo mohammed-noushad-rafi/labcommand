@@ -11,15 +11,17 @@ export default function Button({ children, variant='primary', onClick, disabled,
       type={type}
       onClick={onClick}
       disabled={disabled}
-      onMouseEnter={e => { if (!disabled) e.currentTarget.style.transform = 'translateY(-1px)'; }}
-      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
+      onMouseEnter={e => { if (!disabled) e.currentTarget.style.transform = 'translateY(-1px) scale(1.01)'; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; }}
+      onMouseDown={e => { if (!disabled) e.currentTarget.style.transform = 'translateY(0) scale(0.97)'; }}
+      onMouseUp={e => { if (!disabled) e.currentTarget.style.transform = 'translateY(-1px) scale(1.01)'; }}
       style={{
         padding:'9px 18px', borderRadius:10, fontSize:13, fontWeight:600,
         background:v.bg, color:v.color, border:v.border, boxShadow:v.shadow,
         cursor: disabled ? 'default' : 'pointer',
         opacity: disabled ? 0.5 : 1,
         whiteSpace:'nowrap',
-        transition:'transform .15s, box-shadow .15s',
+        transition:'transform .13s cubic-bezier(.2,.8,.2,1), box-shadow .15s ease, opacity .15s ease',
         ...style,
       }}
     >

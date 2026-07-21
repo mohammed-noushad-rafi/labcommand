@@ -33,11 +33,11 @@ const PALETTE = [
 
 export function StatRow({ stats }) {
   return (
-    <div style={s.grid6}>
+    <div className="lc-stagger" style={s.grid6}>
       {stats.map((stat, i) => {
         const c = PALETTE[i % PALETTE.length];
         return (
-          <div key={stat.label} style={{ ...s.card, background:c.bg, border:'1px solid transparent' }}>
+          <div key={stat.label} className="lc-card-hover" style={{ ...s.card, background:c.bg, border:'1px solid transparent' }}>
             <div style={{ width:6, height:6, borderRadius:'50%', background:c.dot, marginBottom:10 }} />
             <div style={{ ...s.statNum, color:c.dot }}>{stat.value ?? 0}</div>
             <div style={s.statLabel}>{stat.label}</div>

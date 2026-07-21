@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../api/axios';
 import { io } from 'socket.io-client';
+import { API_URL } from '../config';
 
 const STATUS_TONE = {
   online:    { color:'#0f9d58', bg:'#eefbf3' },
@@ -21,6 +22,8 @@ export default function MachineDetail() {
   const [loading,   setLoading]   = useState(true);
   const [msg,       setMsg]       = useState('');
   const [sending,   setSending]   = useState(false);
+  const [screenshot, setScreenshot] = useState(null); // { image, ts }
+  const [zoomed, setZoomed] = useState(false);
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -30,7 +33,7 @@ export default function MachineDetail() {
       setProcesses(r.data.processes || []);
     }).finally(() => setLoading(false));
 
-    socketRef.current = io('http://localhost:3001');
+    socketRef.current = io(API_URL);
 
     socketRef.current.on('machine:telemetry', (data) => {
       if (data.machineId === parseInt(id)) {
@@ -45,7 +48,26 @@ export default function MachineDetail() {
       }
     });
 
-    return () => socketRef.current?.disconnect();
+    socketRef.current.on('exam:screenshot', (data) => {
+      if (data.machineId === parseInt(id)) {
+        setScreenshot({ image: data.image, ts: data.ts });
+      }
+    });
+
+    // Tell this machine's agent to switch into fast live-mirror mode while
+    // this page is open, renewing every 60s so it doesn't hit the agent's
+    // own safety auto-stop, and explicitly stop it when leaving the page.
+    const machineIdNum = parseInt(id);
+    socketRef.current.emit('client:watch', { machineId: machineIdNum });
+    const watchHeartbeat = setInterval(() => {
+      socketRef.current.emit('client:watch', { machineId: machineIdNum });
+    }, 60000);
+
+    return () => {
+      clearInterval(watchHeartbeat);
+      socketRef.current?.emit('client:unwatch', { machineId: machineIdNum });
+      socketRef.current?.disconnect();
+    };
   }, [id]);
 
   const sendCommand = async (type, payload = {}) => {
@@ -96,6 +118,30 @@ export default function MachineDetail() {
           </div>
           <div style={s.sub}>{machine.ip_address} · {machine.lab_name} · {machine.os_info}</div>
         </div>
+      </div>
+
+      <div style={s.panel}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+          <h3 style={{ ...s.panelTitle, marginBottom:0 }}>Live screen</h3>
+          {isOnline && screenshot && (
+            <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, color:'#dc2626', fontWeight:700 }}>
+              <span className="lc-live-dot" style={{ width:6, height:6, borderRadius:'50%', background:'#dc2626', display:'inline-block' }} />
+              LIVE
+            </div>
+          )}
+        </div>
+        {!isOnline ? (
+          <div style={s.emptyState}>Machine is offline — no live feed available</div>
+        ) : screenshot ? (
+          <img
+            src={`data:image/jpeg;base64,${screenshot.image}`}
+            onClick={()=>setZoomed(true)}
+            style={{ width:'100%', maxWidth:640, borderRadius:10, cursor:'zoom-in', display:'block', border:'1px solid #e9e9f0' }}
+            alt="Live screen"
+          />
+        ) : (
+          <div style={s.emptyState}>Waiting for live feed from agent…</div>
+        )}
       </div>
 
       <div style={s.panel}>
@@ -189,6 +235,17 @@ export default function MachineDetail() {
           </div>
         )}
       </div>
+      {zoomed && screenshot && (
+        <div onClick={()=>setZoomed(false)} style={{ position:'fixed', inset:0, background:'rgba(16,16,31,0.85)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', cursor:'zoom-out', padding:40 }}>
+          <div onClick={e=>e.stopPropagation()} style={{ maxWidth:'90vw', maxHeight:'90vh' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+              <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>{machine.hostname}</div>
+              <button onClick={()=>setZoomed(false)} style={{ background:'rgba(255,255,255,0.12)', border:'none', color:'#fff', borderRadius:8, padding:'6px 12px', cursor:'pointer', fontSize:13 }}>Close ✕</button>
+            </div>
+            <img src={`data:image/jpeg;base64,${screenshot.image}`} style={{ maxWidth:'90vw', maxHeight:'80vh', borderRadius:10, border:'1px solid rgba(255,255,255,0.15)', display:'block' }} alt="Live screen enlarged"/>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

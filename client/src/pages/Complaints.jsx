@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
+import { sortDepts } from '../utils/deptOrder';
 import { useAuth } from '../context/AuthContext';
 
 const DEPT_META = {
@@ -590,7 +591,7 @@ export default function Complaints() {
 
   const loadAll = () => {
     Promise.all([
-      api.get('/labs/departments').then(r => setDepartments(r.data.data||[])),
+      api.get('/labs/departments').then(r => setDepartments(sortDepts(r.data.data||[]))),
       api.get('/complaints').then(r => setComplaints(r.data.data||[])),
     ]).finally(() => setLoading(false));
   };

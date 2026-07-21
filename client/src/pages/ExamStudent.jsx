@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import { API_URL } from '../config';
 
 export default function ExamStudent() {
   const { sessionId, machineId } = useParams();
@@ -23,7 +24,7 @@ export default function ExamStudent() {
   };
 
   useEffect(() => {
-    socketRef.current = io('http://localhost:3001');
+    socketRef.current = io(API_URL);
 
     socketRef.current.on('exam:machine_locked', ({ machineId: mid }) => {
       if (parseInt(mid) === parseInt(machineId)) setLocked(true);

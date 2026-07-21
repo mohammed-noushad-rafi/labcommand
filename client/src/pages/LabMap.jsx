@@ -1,7 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import { API_URL } from '../config';
 import api from '../api/axios';
+import { sortDepts } from '../utils/deptOrder';
 
 const STATUS_COLOR = {
   online:    { bg:'#eefbf3', border:'#bce8cc', dot:'#0f9d58', label:'Online' },
@@ -30,13 +32,28 @@ function getStyle(dept) {
   return DEPT_STYLE[dept] || { icon:'🏫', color:'#4f46e5', bg:'#eef2ff', type:'computers', desc:'College laboratory' };
 }
 
-function ComputerCard({ machine, onClick }) {
+function ComputerCard({ machine, onClick, screenshot, onZoom }) {
   const st = STATUS_COLOR[machine.status] || STATUS_COLOR.offline;
+  const isLive = machine.status === 'online' || machine.status === 'locked' || machine.status === 'exam' || machine.status === 'classroom';
   return (
     <div onClick={onClick}
       style={{ background:st.bg, border:'1.5px solid ' + st.border, borderRadius:14, padding:'16px', cursor:'pointer', transition:'transform .15s, box-shadow .15s' }}
       onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow='0 8px 20px rgba(16,16,30,0.08)'; }}
       onMouseLeave={e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow=''; }}>
+      {isLive && (
+        screenshot ? (
+          <img
+            src={`data:image/jpeg;base64,${screenshot.image}`}
+            onClick={e => { e.stopPropagation(); onZoom(machine); }}
+            style={{ width:'100%', aspectRatio:'16/10', objectFit:'cover', borderRadius:8, marginBottom:10, cursor:'zoom-in', display:'block', border:'1px solid rgba(0,0,0,0.06)' }}
+            alt="Live screen"
+          />
+        ) : (
+          <div style={{ width:'100%', aspectRatio:'16/10', background:'rgba(0,0,0,0.03)', border:'1px dashed rgba(0,0,0,0.1)', borderRadius:8, marginBottom:10, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9.5, color:'#bbb' }}>
+            Connecting…
+          </div>
+        )
+      )}
       <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:8 }}>
         <span style={{ width:8, height:8, borderRadius:'50%', background:st.dot, flexShrink:0 }}/>
         <span style={{ fontSize:13, fontWeight:700, color:'#16161f', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{machine.hostname}</span>
@@ -90,32 +107,58 @@ export default function LabMap() {
   const [dept,  setDept]  = useState(null);
   const [lab,   setLab]   = useState(null);
   const [loading, setLoading] = useState(true);
+  const [screenshots, setScreenshots] = useState({}); // machineId -> { image, ts }
+  const [zoomed, setZoomed] = useState(null); // machine object currently enlarged
   const socketRef = useRef(null);
+  const machinesRef = useRef([]);
+  useEffect(() => { machinesRef.current = machines; }, [machines]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    socketRef.current = io('http://localhost:3001', { auth: { token } });
+    socketRef.current = io(API_URL, { auth: { token } });
     socketRef.current.on('machine:status', ({ machineId, status }) => {
       setMachines(prev => prev.map(m => m.id === machineId ? { ...m, status } : m));
     });
     socketRef.current.on('machine:telemetry', ({ machineId, cpu, ram }) => {
       setMachines(prev => prev.map(m => m.id === machineId ? { ...m, cpu_percent:cpu, ram_percent:ram } : m));
     });
+    socketRef.current.on('exam:screenshot', (data) => {
+      setScreenshots(prev => ({ ...prev, [data.machineId]: { image: data.image, ts: data.ts } }));
+    });
     Promise.all([
       api.get('/machines').then(r => setMachines(r.data.data || [])),
       api.get('/equipment').then(r => setEquipment(r.data.data || [])),
-      api.get('/labs/departments').then(r => setDepartments(r.data.data || [])),
+      api.get('/labs/departments').then(r => setDepartments(sortDepts(r.data.data || []))),
     ]).finally(() => setLoading(false));
     return () => socketRef.current?.disconnect();
   }, []);
+
+  // Live-mirror every online/locked machine in the currently open lab while
+  // this screen is open, same monitoring-wall behavior as Classroom mode.
+  // Heartbeat every 60s picks up machines that come online mid-view, and
+  // everything is unwatched cleanly when leaving this lab or the page.
+  useEffect(() => {
+    if (!lab) return;
+    const watchAll = () => {
+      machinesRef.current
+        .filter(m => m.lab_id === lab.id && ['online','locked','exam','classroom'].includes(m.status))
+        .forEach(m => socketRef.current?.emit('client:watch', { machineId: m.id }));
+    };
+    watchAll();
+    const heartbeat = setInterval(watchAll, 60000);
+    return () => {
+      clearInterval(heartbeat);
+      machinesRef.current
+        .filter(m => m.lab_id === lab.id)
+        .forEach(m => socketRef.current?.emit('client:unwatch', { machineId: m.id }));
+    };
+  }, [lab?.id]);
 
   if (loading) return <div style={{ padding:60, textAlign:'center', color:'#b4b4c0', fontSize:13 }}>Loading lab map</div>;
 
   const getMachinesForLab  = (labId) => machines.filter(m => m.lab_id === labId);
   const getEquipmentForLab = (labId) => equipment.filter(e => e.lab_id === labId);
-  const getMachinesForDept = (d) => d.labs.flatMap(l => getMachinesForLab(l.id));
-
-  if (lab && dept) {
+  const getMachinesForDept = (d) => d.labs.flatMap(l => getMachinesForLab(l.id));  if (lab && dept) {
     const style      = getStyle(dept.department);
     const isComputer = style.type === 'computers';
     const labMachines  = getMachinesForLab(lab.id);
@@ -191,11 +234,23 @@ export default function LabMap() {
           </div>
         ) : isComputer ? (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:12 }}>
-            {labMachines.map(m => <ComputerCard key={m.id} machine={m} onClick={() => navigate('/machines/' + m.id)}/>)}
+            {labMachines.map(m => <ComputerCard key={m.id} machine={m} onClick={() => navigate('/machines/' + m.id)} screenshot={screenshots[m.id]} onZoom={setZoomed}/>)}
           </div>
         ) : (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:12 }}>
             {labEquipment.map(e => <EquipmentCard key={e.id} item={e} style={style}/>)}
+          </div>
+        )}
+
+        {zoomed && screenshots[zoomed.id] && (
+          <div onClick={()=>setZoomed(null)} style={{ position:'fixed', inset:0, background:'rgba(16,16,31,0.85)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', cursor:'zoom-out', padding:40 }}>
+            <div onClick={e=>e.stopPropagation()} style={{ maxWidth:'90vw', maxHeight:'90vh' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>{zoomed.hostname}</div>
+                <button onClick={()=>setZoomed(null)} style={{ background:'rgba(255,255,255,0.12)', border:'none', color:'#fff', borderRadius:8, padding:'6px 12px', cursor:'pointer', fontSize:13 }}>Close ✕</button>
+              </div>
+              <img src={`data:image/jpeg;base64,${screenshots[zoomed.id].image}`} style={{ maxWidth:'90vw', maxHeight:'80vh', borderRadius:10, border:'1px solid rgba(255,255,255,0.15)', display:'block' }} alt="Live screen enlarged"/>
+            </div>
           </div>
         )}
       </div>

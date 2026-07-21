@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
+import { sortDepts } from '../utils/deptOrder';
 
 const DEPT_META = {
   'Computer Science': { icon:'🖥️', color:'#4f46e5' },
@@ -166,6 +167,7 @@ function LabInventory({ lab, dept, onBack, onBackToDept }) {
   const [editing,  setEditing]  = useState(null);
   const [nameInput,setNameInput]= useState('');
   const [catInput, setCatInput] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [form,     setForm]     = useState({
     lab_id:lab.id, item_name:'', category:'', quantity:0,
     min_threshold:5, unit:'pieces', supplier_name:'', supplier_contact:'',
@@ -179,10 +181,11 @@ function LabInventory({ lab, dept, onBack, onBackToDept }) {
 
   const openAdd = () => {
     setForm({ lab_id:lab.id, item_name:'', category:'', quantity:0, min_threshold:5, unit:'pieces', supplier_name:'', supplier_contact:'' });
-    setNameInput(''); setCatInput(''); setEditing(null); setModal(true);
+    setNameInput(''); setCatInput(''); setEditing(null); setShowAdvanced(false); setModal(true);
   };
   const openEdit = (item) => {
-    setForm({...item}); setNameInput(item.item_name); setCatInput(item.category||''); setEditing(item.id); setModal(true);
+    setForm({...item}); setNameInput(item.item_name); setCatInput(item.category||''); setEditing(item.id);
+    setShowAdvanced(!!(item.supplier_name || item.supplier_contact)); setModal(true);
   };
 
   const save = async () => {
@@ -350,15 +353,26 @@ function LabInventory({ lab, dept, onBack, onBackToDept }) {
                   <input type="number" min="0" value={form.min_threshold} onChange={e=>setForm({...form,min_threshold:parseInt(e.target.value)||0})} style={inp}/>
                   <div style={{ fontSize:10.5, color:'#bbb', marginTop:3 }}>Alert when stock falls below this</div>
                 </div>
-                <div>
-                  <label style={lbl}>Supplier name</label>
-                  <input value={form.supplier_name||''} onChange={e=>setForm({...form,supplier_name:e.target.value})} placeholder="e.g. Rohan Enterprises" style={inp}/>
-                </div>
-                <div>
-                  <label style={lbl}>Supplier contact</label>
-                  <input value={form.supplier_contact||''} onChange={e=>setForm({...form,supplier_contact:e.target.value})} placeholder="Phone or email" style={inp}/>
-                </div>
               </div>
+
+              <button type="button" onClick={()=>setShowAdvanced(!showAdvanced)}
+                style={{ background:'none', border:'none', padding:0, color:meta.color, fontSize:12.5, fontWeight:600, cursor:'pointer', textAlign:'left', display:'flex', alignItems:'center', gap:5 }}>
+                <span style={{ display:'inline-block', transition:'transform .15s', transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
+                {showAdvanced ? 'Hide' : 'Add'} supplier details (optional)
+              </button>
+
+              {showAdvanced && (
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, background:'#fafafd', border:'1px solid #ebebf0', borderRadius:10, padding:14 }}>
+                  <div>
+                    <label style={lbl}>Supplier name</label>
+                    <input value={form.supplier_name||''} onChange={e=>setForm({...form,supplier_name:e.target.value})} placeholder="e.g. Rohan Enterprises" style={inp}/>
+                  </div>
+                  <div>
+                    <label style={lbl}>Supplier contact</label>
+                    <input value={form.supplier_contact||''} onChange={e=>setForm({...form,supplier_contact:e.target.value})} placeholder="Phone or email" style={inp}/>
+                  </div>
+                </div>
+              )}
 
               {form.quantity <= form.min_threshold && form.quantity >= 0 && (
                 <div style={{ background:'#fef2f2', border:'1px solid #f5bcbc', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#dc2626', fontWeight:600 }}>
@@ -388,7 +402,7 @@ export default function Inventory() {
 
   const loadAll = () => {
     Promise.all([
-      api.get('/labs/departments').then(r => setDepartments(r.data.data||[])),
+      api.get('/labs/departments').then(r => setDepartments(sortDepts(r.data.data||[]))),
       api.get('/inventory').then(r => setInventory(r.data.data||[])),
     ]).finally(() => setLoading(false));
   };

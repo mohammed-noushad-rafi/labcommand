@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
+import { sortDepts } from '../utils/deptOrder';
 import { useAuth } from '../context/AuthContext';
 
 const DEPT_META = {
@@ -123,15 +124,12 @@ function LabLevel({ dept, slots, onSelect, onBack }) {
 }
 
 // LEVEL 3 — Lab booking page
-function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user }) {
+function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user, users }) {
   const meta = getMeta(dept.department);
   const [date,       setDate]       = useState(today());
   const [myBookings, setMyBookings] = useState([]);
   const [modal,      setModal]      = useState(false);
-  const [users,      setUsers]      = useState([]);
   const [form,       setForm]       = useState({ lab_id:lab.id, date:today(), start_time:'', end_time:'', purpose:'', assigned_to:'', assigned_name:'', notes:'' });
-  const [userSearch,   setUserSearch]   = useState('');
-  const [showUsers,    setShowUsers]    = useState(false);
   const [assignedUser, setAssignedUser] = useState(null);
   const [loading,    setLoading]    = useState(false);
   const [purposeInput, setPurposeInput] = useState('');
@@ -351,38 +349,22 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
               {(user.role==='admin'||user.role==='staff') && (
                 <div>
                   <label style={lbl}>Assign to (optional)</label>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                    <div>
-                      <label style={{ fontSize:11, color:'#bbb', display:'block', marginBottom:5 }}>Department</label>
-                      <select value={userSearch} onChange={e=>{setUserSearch(e.target.value);setAssignedUser(null);}}
-                        style={{ ...inp, color: userSearch?'#16161f':'#bbb' }}>
-                        <option value="">Select department</option>
-                        <option value="Computer Science">🖥️ Computer Science</option>
-                        <option value="Physics">⚛️ Physics</option>
-                        <option value="Chemistry">🧪 Chemistry</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ fontSize:11, color:'#bbb', display:'block', marginBottom:5 }}>Person</label>
-                      <select value={assignedUser?.id||''} onChange={e=>{
-                        const u = users.find(u=>u.id===parseInt(e.target.value));
-                        setAssignedUser(u||null);
-                      }} disabled={!userSearch}
-                        style={{ ...inp, color: assignedUser?'#16161f':'#bbb', opacity:userSearch?1:0.5 }}>
-                        <option value="">{userSearch?'Select person':'Select dept first'}</option>
-                        {users.filter(u=>u.department===userSearch&&u.is_active&&['student','invigilator'].includes(u.role)).map(u=>(
-                          <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
+                  <select value={assignedUser?.id||''} onChange={e=>{
+                    const u = users.find(u=>u.id===parseInt(e.target.value));
+                    setAssignedUser(u||null);
+                  }} style={{ ...inp, color: assignedUser?'#16161f':'#bbb' }}>
+                    <option value="">Select person ({dept.department})</option>
+                    {users.filter(u=>u.department===dept.department&&['student','invigilator','staff'].includes(u.role)).map(u=>(
+                      <option key={u.id} value={u.id}>{u.name} ({u.role==='student'?'CR':u.role})</option>
+                    ))}
+                  </select>
                   {assignedUser && (
                     <div style={{ background:'#eef2ff', border:'1px solid #c7d2fe', borderRadius:8, padding:'10px 14px', marginTop:8, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                       <div>
                         <div style={{ fontSize:13, fontWeight:600, color:'#4f46e5' }}>✓ {assignedUser.name}</div>
                         <div style={{ fontSize:11, color:'#9494a3', marginTop:2 }}>{assignedUser.role} · {assignedUser.department}</div>
                       </div>
-                      <button onClick={()=>{setAssignedUser(null);setUserSearch('');}}
+                      <button onClick={()=>setAssignedUser(null)}
                         style={{ background:'none', border:'none', cursor:'pointer', color:'#bbb', fontSize:18, lineHeight:1 }}>×</button>
                     </div>
                   )}
@@ -413,19 +395,20 @@ export default function Booking() {
   const { user } = useAuth();
   const [departments, setDepartments] = useState([]);
   const [slots,       setSlots]       = useState([]);
+  const [users,       setUsers]       = useState([]);
   const [dept, setDept] = useState(null);
   const [lab,  setLab]  = useState(null);
   const [loading, setLoading] = useState(true);
 
   const loadAll = () => {
     Promise.all([
-      api.get('/labs/departments').then(r => setDepartments(r.data.data||[])),
+      api.get('/labs/departments').then(r => setDepartments(sortDepts(r.data.data||[]))),
       api.get('/booking').then(r => setSlots(r.data.data||[])),
     ]).finally(() => setLoading(false));
   };
   useEffect(() => {
     loadAll();
-    api.get('/users').then(r => setUsers(r.data.data||[])).catch(()=>{});
+    api.get('/users/assignable').then(r => setUsers(r.data.data||[])).catch(()=>{});
   }, []);
 
   if (loading) return <div style={{ padding:60, textAlign:'center', color:'#c4c4cc', fontSize:13 }}>Loading</div>;
@@ -433,7 +416,7 @@ export default function Booking() {
   return (
     <div style={{ padding:'36px 40px', maxWidth:1100, fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif' }}>
       {lab && dept ? (
-        <LabBooking lab={lab} dept={dept} allSlots={slots} user={user}
+        <LabBooking lab={lab} dept={dept} allSlots={slots} user={user} users={users}
           onBack={()=>setLab(null)} onBackToDept={()=>{setLab(null);setDept(null);}} onRefresh={loadAll}/>
       ) : dept ? (
         <LabLevel dept={dept} slots={slots} onSelect={l=>setLab(l)} onBack={()=>setDept(null)}/>
