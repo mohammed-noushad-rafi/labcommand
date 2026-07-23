@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { API_URL } from '../config';
 import api from '../api/axios';
-import { sortDepts } from '../utils/deptOrder';
+import DeptIcon from '../components/DeptIcon';
 
 const STATUS_COLOR = {
   online:    { bg:'#eefbf3', border:'#bce8cc', dot:'#0f9d58', label:'Online' },
@@ -20,40 +20,25 @@ const EQUIP_STATUS_COLOR = {
 };
 
 const DEPT_STYLE = {
-  'Computer Science': { icon:'🖥️', color:'#4f46e5', bg:'#eef2ff', type:'computers', desc:'Programming, networking and computing labs' },
-  'Physics':          { icon:'⚛️',  color:'#0891b2', bg:'#e0f7fa', type:'equipment', desc:'Physics instruments and research labs' },
-  'Chemistry':        { icon:'🧪', color:'#0f9d58', bg:'#e8f5e9', type:'equipment', desc:'Chemistry instruments and laboratory work' },
+  'Computer Science': { color:'#4f46e5', bg:'#eef2ff', type:'computers', desc:'Programming, networking and computing labs' },
+  'Physics':          { color:'#0891b2', bg:'#e0f7fa', type:'equipment', desc:'Physics instruments and research labs' },
+  'Chemistry':        { color:'#0f9d58', bg:'#e8f5e9', type:'equipment', desc:'Chemistry instruments and laboratory work' },
 };
 
 const PHYSICS_INSTRUMENTS = ['Oscilloscope','Function Generator','Power Supply','Multimeter','Signal Generator','CRO','Voltmeter','Ammeter','Spectrometer','Potentiometer'];
 const CHEMISTRY_INSTRUMENTS = ['Centrifuge','Spectrophotometer','Hot Plate','Magnetic Stirrer','pH Meter','Burette','Pipette','Weighing Balance','Water Bath','Distillation Unit'];
 
 function getStyle(dept) {
-  return DEPT_STYLE[dept] || { icon:'🏫', color:'#4f46e5', bg:'#eef2ff', type:'computers', desc:'College laboratory' };
+  return DEPT_STYLE[dept] || { color:'#4f46e5', bg:'#eef2ff', type:'computers', desc:'College laboratory' };
 }
 
-function ComputerCard({ machine, onClick, screenshot, onZoom }) {
+function ComputerCard({ machine, onClick }) {
   const st = STATUS_COLOR[machine.status] || STATUS_COLOR.offline;
-  const isLive = machine.status === 'online' || machine.status === 'locked' || machine.status === 'exam' || machine.status === 'classroom';
   return (
     <div onClick={onClick}
       style={{ background:st.bg, border:'1.5px solid ' + st.border, borderRadius:14, padding:'16px', cursor:'pointer', transition:'transform .15s, box-shadow .15s' }}
       onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow='0 8px 20px rgba(16,16,30,0.08)'; }}
       onMouseLeave={e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow=''; }}>
-      {isLive && (
-        screenshot ? (
-          <img
-            src={`data:image/jpeg;base64,${screenshot.image}`}
-            onClick={e => { e.stopPropagation(); onZoom(machine); }}
-            style={{ width:'100%', aspectRatio:'16/10', objectFit:'cover', borderRadius:8, marginBottom:10, cursor:'zoom-in', display:'block', border:'1px solid rgba(0,0,0,0.06)' }}
-            alt="Live screen"
-          />
-        ) : (
-          <div style={{ width:'100%', aspectRatio:'16/10', background:'rgba(0,0,0,0.03)', border:'1px dashed rgba(0,0,0,0.1)', borderRadius:8, marginBottom:10, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9.5, color:'#bbb' }}>
-            Connecting…
-          </div>
-        )
-      )}
       <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:8 }}>
         <span style={{ width:8, height:8, borderRadius:'50%', background:st.dot, flexShrink:0 }}/>
         <span style={{ fontSize:13, fontWeight:700, color:'#16161f', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{machine.hostname}</span>
@@ -107,11 +92,7 @@ export default function LabMap() {
   const [dept,  setDept]  = useState(null);
   const [lab,   setLab]   = useState(null);
   const [loading, setLoading] = useState(true);
-  const [screenshots, setScreenshots] = useState({}); // machineId -> { image, ts }
-  const [zoomed, setZoomed] = useState(null); // machine object currently enlarged
   const socketRef = useRef(null);
-  const machinesRef = useRef([]);
-  useEffect(() => { machinesRef.current = machines; }, [machines]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -122,43 +103,21 @@ export default function LabMap() {
     socketRef.current.on('machine:telemetry', ({ machineId, cpu, ram }) => {
       setMachines(prev => prev.map(m => m.id === machineId ? { ...m, cpu_percent:cpu, ram_percent:ram } : m));
     });
-    socketRef.current.on('exam:screenshot', (data) => {
-      setScreenshots(prev => ({ ...prev, [data.machineId]: { image: data.image, ts: data.ts } }));
-    });
     Promise.all([
       api.get('/machines').then(r => setMachines(r.data.data || [])),
       api.get('/equipment').then(r => setEquipment(r.data.data || [])),
-      api.get('/labs/departments').then(r => setDepartments(sortDepts(r.data.data || []))),
+      api.get('/labs/departments').then(r => setDepartments(r.data.data || [])),
     ]).finally(() => setLoading(false));
     return () => socketRef.current?.disconnect();
   }, []);
-
-  // Live-mirror every online/locked machine in the currently open lab while
-  // this screen is open, same monitoring-wall behavior as Classroom mode.
-  // Heartbeat every 60s picks up machines that come online mid-view, and
-  // everything is unwatched cleanly when leaving this lab or the page.
-  useEffect(() => {
-    if (!lab) return;
-    const watchAll = () => {
-      machinesRef.current
-        .filter(m => m.lab_id === lab.id && ['online','locked','exam','classroom'].includes(m.status))
-        .forEach(m => socketRef.current?.emit('client:watch', { machineId: m.id }));
-    };
-    watchAll();
-    const heartbeat = setInterval(watchAll, 60000);
-    return () => {
-      clearInterval(heartbeat);
-      machinesRef.current
-        .filter(m => m.lab_id === lab.id)
-        .forEach(m => socketRef.current?.emit('client:unwatch', { machineId: m.id }));
-    };
-  }, [lab?.id]);
 
   if (loading) return <div style={{ padding:60, textAlign:'center', color:'#b4b4c0', fontSize:13 }}>Loading lab map</div>;
 
   const getMachinesForLab  = (labId) => machines.filter(m => m.lab_id === labId);
   const getEquipmentForLab = (labId) => equipment.filter(e => e.lab_id === labId);
-  const getMachinesForDept = (d) => d.labs.flatMap(l => getMachinesForLab(l.id));  if (lab && dept) {
+  const getMachinesForDept = (d) => d.labs.flatMap(l => getMachinesForLab(l.id));
+
+  if (lab && dept) {
     const style      = getStyle(dept.department);
     const isComputer = style.type === 'computers';
     const labMachines  = getMachinesForLab(lab.id);
@@ -173,13 +132,13 @@ export default function LabMap() {
         <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:20, flexWrap:'wrap' }}>
           <button onClick={() => { setLab(null); setDept(null); }} style={backBtn}>← Departments</button>
           <span style={{ color:'#ddd' }}>›</span>
-          <button onClick={() => setLab(null)} style={{ ...backBtn, background:style.bg, color:style.color }}>{style.icon} {dept.department}</button>
+          <button onClick={() => setLab(null)} style={{ ...backBtn, background:style.bg, color:style.color, display:'inline-flex', alignItems:'center', gap:6 }}><DeptIcon department={dept.department} size={14}/> {dept.department}</button>
           <span style={{ color:'#ddd' }}>›</span>
           <span style={{ fontSize:13, fontWeight:700, color:'#16161f' }}>{lab.name}</span>
         </div>
 
         <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:24, paddingBottom:20, borderBottom:'1px solid #e9e9f0' }}>
-          <div style={{ width:46, height:46, borderRadius:12, background:style.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:24 }}>{style.icon}</div>
+          <div style={{ width:46, height:46, borderRadius:12, background:style.bg, display:'flex', alignItems:'center', justifyContent:'center' }}><DeptIcon department={dept.department} size={24}/></div>
           <div>
             <h1 style={{ fontSize:21, fontWeight:700, color:'#16161f', margin:0 }}>{lab.name}</h1>
             <p style={{ fontSize:13, color:'#7c7c8a', margin:0 }}>
@@ -211,9 +170,10 @@ export default function LabMap() {
         </div>
 
         {!isComputer && (
-          <div style={{ background:'#fafafd', border:'1px solid #e9e9f0', borderRadius:10, padding:'12px 16px', marginBottom:20, fontSize:12, color:'#7c7c8a' }}>
-            {style.icon} This is a {dept.department} lab — showing scientific instruments and equipment status instead of computer telemetry.
-            {items.length === 0 && ' Add equipment for this lab in the Equipment module to see it here.'}
+          <div style={{ background:'#fafafd', border:'1px solid #e9e9f0', borderRadius:10, padding:'12px 16px', marginBottom:20, fontSize:12, color:'#7c7c8a', display:'flex', alignItems:'flex-start', gap:8 }}>
+            <DeptIcon department={dept.department} size={15}/>
+            <span>This is a {dept.department} lab — showing scientific instruments and equipment status instead of computer telemetry.
+            {items.length === 0 && ' Add equipment for this lab in the Equipment module to see it here.'}</span>
           </div>
         )}
 
@@ -234,23 +194,11 @@ export default function LabMap() {
           </div>
         ) : isComputer ? (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:12 }}>
-            {labMachines.map(m => <ComputerCard key={m.id} machine={m} onClick={() => navigate('/machines/' + m.id)} screenshot={screenshots[m.id]} onZoom={setZoomed}/>)}
+            {labMachines.map(m => <ComputerCard key={m.id} machine={m} onClick={() => navigate('/machines/' + m.id)}/>)}
           </div>
         ) : (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:12 }}>
             {labEquipment.map(e => <EquipmentCard key={e.id} item={e} style={style}/>)}
-          </div>
-        )}
-
-        {zoomed && screenshots[zoomed.id] && (
-          <div onClick={()=>setZoomed(null)} style={{ position:'fixed', inset:0, background:'rgba(16,16,31,0.85)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', cursor:'zoom-out', padding:40 }}>
-            <div onClick={e=>e.stopPropagation()} style={{ maxWidth:'90vw', maxHeight:'90vh' }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-                <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>{zoomed.hostname}</div>
-                <button onClick={()=>setZoomed(null)} style={{ background:'rgba(255,255,255,0.12)', border:'none', color:'#fff', borderRadius:8, padding:'6px 12px', cursor:'pointer', fontSize:13 }}>Close ✕</button>
-              </div>
-              <img src={`data:image/jpeg;base64,${screenshots[zoomed.id].image}`} style={{ maxWidth:'90vw', maxHeight:'80vh', borderRadius:10, border:'1px solid rgba(255,255,255,0.15)', display:'block' }} alt="Live screen enlarged"/>
-            </div>
           </div>
         )}
       </div>
@@ -267,7 +215,7 @@ export default function LabMap() {
         <div style={{ height:3, width:64, borderRadius:2, background:style.color, marginBottom:16 }}/>
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:24, paddingBottom:20, borderBottom:'1px solid #e9e9f0' }}>
           <button onClick={() => setDept(null)} style={backBtn}>← Departments</button>
-          <span style={{ fontSize:24 }}>{style.icon}</span>
+          <DeptIcon department={dept.department} size={24}/>
           <div>
             <h1 style={{ fontSize:21, fontWeight:700, color:'#16161f', margin:0 }}>{dept.department}</h1>
             <p style={{ fontSize:13, color:'#7c7c8a', margin:0 }}>
@@ -352,7 +300,7 @@ export default function LabMap() {
               style={{ background:'#fff', border:'1px solid #ebebf0', borderRadius:16, padding:'32px 28px', cursor:'pointer', transition:'all .15s ease' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor=style.color; e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 8px 24px '+style.color+'12'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor='#ebebf0'; e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
-              <div style={{ fontSize:34, marginBottom:18 }}>{style.icon}</div>
+              <div style={{ marginBottom:18 }}><DeptIcon department={d.department} size={34}/></div>
               <div style={{ fontSize:18, fontWeight:700, color:'#16161f', marginBottom:4 }}>{d.department}</div>
               <div style={{ fontSize:12, color:'#bbb', fontWeight:500 }}>{d.lab_count} lab{d.lab_count>1?'s':''}</div>
             </div>
@@ -381,7 +329,7 @@ function DeptLevel({ departments, onSelect }) {
               style={{ background:'#fff', border:'1px solid #ebebf0', borderRadius:16, padding:'32px 28px', cursor:'pointer', transition:'all .15s ease' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor=meta.color; e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 8px 24px '+meta.color+'12'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor='#ebebf0'; e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
-              <div style={{ fontSize:34, marginBottom:18 }}>{meta.icon}</div>
+              <div style={{ marginBottom:18 }}><DeptIcon department={d.department} size={34}/></div>
               <div style={{ fontSize:18, fontWeight:700, color:'#16161f', marginBottom:4 }}>{d.department}</div>
               <div style={{ fontSize:12, color:'#bbb', fontWeight:500 }}>{d.lab_count} lab{d.lab_count>1?'s':''}</div>
             </div>

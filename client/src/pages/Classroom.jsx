@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { API_URL } from '../config';
+import DeptIcon from '../components/DeptIcon';
 import api from '../api/axios';
 
 const STATUS_COLOR = {
@@ -38,11 +39,7 @@ export default function Classroom() {
   const [loading,      setLoading]      = useState(false);
   const [log,          setLog]          = useState([]);
   const [showTemplates,setShowTemplates]= useState(false);
-  const [screenshots,  setScreenshots]  = useState({}); // machineId -> { image, ts }
-  const [zoomed,       setZoomed]       = useState(null); // machine object currently enlarged
-  const socketRef  = useRef(null);
-  const machinesRef = useRef([]);
-  useEffect(() => { machinesRef.current = machines; }, [machines]);
+  const socketRef = useRef(null);
 
   useEffect(() => {
     api.get('/labs/departments').then(r => {
@@ -59,9 +56,6 @@ export default function Classroom() {
     socketRef.current.on('machine:telemetry', ({ machineId, cpu, ram }) => {
       setMachines(prev => prev.map(m => m.id === machineId ? { ...m, cpu_percent:cpu, ram_percent:ram } : m));
     });
-    socketRef.current.on('exam:screenshot', (data) => {
-      setScreenshots(prev => ({ ...prev, [data.machineId]: { image: data.image, ts: data.ts } }));
-    });
     return () => socketRef.current?.disconnect();
   }, []);
 
@@ -69,27 +63,6 @@ export default function Classroom() {
   const onlineCount = labMachines.filter(m => m.status === 'online' || m.status === 'classroom').length;
   const lockedCount = labMachines.filter(m => m.status === 'classroom').length;
   const addLog = msg => setLog(prev => [new Date().toLocaleTimeString('en-IN') + ' — ' + msg, ...prev.slice(0,19)]);
-
-  // Live-mirror every online machine in the currently selected lab while this
-  // screen is open — a monitoring wall for the teacher. Re-issued every 60s
-  // (heartbeat) so machines that come online mid-session get picked up too,
-  // and unwatched cleanly when leaving this lab or the page.
-  useEffect(() => {
-    if (!selectedLab) return;
-    const watchAll = () => {
-      machinesRef.current
-        .filter(m => m.lab_id === selectedLab.id && (m.status === 'online' || m.status === 'classroom'))
-        .forEach(m => socketRef.current?.emit('client:watch', { machineId: m.id }));
-    };
-    watchAll();
-    const heartbeat = setInterval(watchAll, 60000);
-    return () => {
-      clearInterval(heartbeat);
-      machinesRef.current
-        .filter(m => m.lab_id === selectedLab.id)
-        .forEach(m => socketRef.current?.emit('client:unwatch', { machineId: m.id }));
-    };
-  }, [selectedLab?.id]);
 
   const startSession = async () => {
     if (!selectedLab || !sessionName.trim()) return alert('Enter a session name');
@@ -137,7 +110,7 @@ export default function Classroom() {
             style={{ background:'#fff', border:'1px solid #ebebf0', borderRadius:16, padding:'32px 28px', cursor:'pointer', transition:'all .15s ease' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor='#7c3aed'; e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 8px 24px #7c3aed12'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor='#ebebf0'; e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
-            <div style={{ fontSize:34, marginBottom:18 }}>🖥️</div>
+            <div style={{ marginBottom:18 }}><DeptIcon department={d.department} size={34}/></div>
             <div style={{ fontSize:18, fontWeight:700, color:'#16161f', marginBottom:4 }}>{d.department}</div>
             <div style={{ fontSize:12, color:'#bbb', marginBottom:16 }}>{d.lab_count} lab{d.lab_count>1?'s':''}</div>
             <span style={{ fontSize:13, color:'#7c3aed', fontWeight:600 }}>Select lab →</span>
@@ -154,7 +127,7 @@ export default function Classroom() {
       <button onClick={() => setDept(null)} style={backBtn}>← Back</button>
       <div style={{ marginBottom:36, marginTop:20 }}>
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-          <span style={{ fontSize:22 }}>🖥️</span>
+          <DeptIcon department="Computer Science" size={20}/>
           <span style={{ fontSize:11, color:'#bbb', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.08em' }}>Computer Science</span>
         </div>
         <h1 style={{ fontSize:22, fontWeight:700, color:'#16161f', margin:0 }}>Select a lab</h1>
@@ -321,20 +294,6 @@ export default function Classroom() {
                   <div key={m.id} style={{ background:st.bg, border:'1.5px solid '+st.border, borderRadius:13, padding:'14px 12px', transition:'transform .1s' }}
                     onMouseEnter={e => e.currentTarget.style.transform='translateY(-2px)'}
                     onMouseLeave={e => e.currentTarget.style.transform=''}>
-                    {(m.status==='online' || m.status==='classroom') && (
-                      screenshots[m.id] ? (
-                        <img
-                          src={`data:image/jpeg;base64,${screenshots[m.id].image}`}
-                          onClick={()=>setZoomed(m)}
-                          style={{ width:'100%', aspectRatio:'16/10', objectFit:'cover', borderRadius:8, marginBottom:8, cursor:'zoom-in', display:'block', border:'1px solid rgba(0,0,0,0.06)' }}
-                          alt="Live screen"
-                        />
-                      ) : (
-                        <div style={{ width:'100%', aspectRatio:'16/10', background:'rgba(0,0,0,0.03)', border:'1px dashed rgba(0,0,0,0.1)', borderRadius:8, marginBottom:8, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9.5, color:'#bbb' }}>
-                          Connecting…
-                        </div>
-                      )
-                    )}
                     <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
                       <span style={{ width:7, height:7, borderRadius:'50%', background:st.dot, ...(locked?{animation:'pulse 1.2s infinite'}:{}) }}/>
                       <span style={{ fontSize:12.5, fontWeight:700, color:'#16161f', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{m.hostname}</span>
@@ -358,19 +317,6 @@ export default function Classroom() {
           )}
         </div>
       </div>
-
-      {zoomed && screenshots[zoomed.id] && (
-        <div onClick={()=>setZoomed(null)} style={{ position:'fixed', inset:0, background:'rgba(16,16,31,0.85)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', cursor:'zoom-out', padding:40 }}>
-          <div onClick={e=>e.stopPropagation()} style={{ maxWidth:'90vw', maxHeight:'90vh' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-              <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>{zoomed.hostname}</div>
-              <button onClick={()=>setZoomed(null)} style={{ background:'rgba(255,255,255,0.12)', border:'none', color:'#fff', borderRadius:8, padding:'6px 12px', cursor:'pointer', fontSize:13 }}>Close ✕</button>
-            </div>
-            <img src={`data:image/jpeg;base64,${screenshots[zoomed.id].image}`} style={{ maxWidth:'90vw', maxHeight:'80vh', borderRadius:10, border:'1px solid rgba(255,255,255,0.15)', display:'block' }} alt="Live screen enlarged"/>
-          </div>
-        </div>
-      )}
-
       <style>{'@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}'}</style>
     </div>
   );

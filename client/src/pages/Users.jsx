@@ -1,19 +1,20 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
+import DeptIcon from '../components/DeptIcon';
 
 const ROLE_META = {
   admin:       { color:'#4f46e5', bg:'#eef2ff', border:'#c7d2fe', label:'Admin' },
   staff:       { color:'#0891b2', bg:'#ecfeff', border:'#a5f3fc', label:'Staff' },
   invigilator: { color:'#d97706', bg:'#fef8ee', border:'#fde68a', label:'Invigilator' },
-  student:     { color:'#0f9d58', bg:'#eefbf3', border:'#bce8cc', label:'Class Rep (CR)' },
+  student:     { color:'#0f9d58', bg:'#eefbf3', border:'#bce8cc', label:'Student' },
 };
 
 const DEPARTMENTS = ['Computer Science', 'Physics', 'Chemistry'];
 
 const DEPT_META = {
-  'Computer Science': { icon:'🖥️', color:'#4f46e5' },
-  'Physics':          { icon:'⚛️',  color:'#0891b2' },
-  'Chemistry':        { icon:'🧪', color:'#0f9d58' },
+  'Computer Science': { color:'#4f46e5' },
+  'Physics':          { color:'#0891b2' },
+  'Chemistry':        { color:'#0f9d58' },
 };
 
 const emptyForm = { name:'', email:'', password:'', role:'student', department:'' };
@@ -87,7 +88,7 @@ export default function Users() {
           { label:'Admin',       value:counts.admin,       color:'#7c3aed' },
           { label:'Staff',       value:counts.staff,       color:'#0891b2' },
           { label:'Invigilator', value:counts.invigilator, color:'#d97706' },
-          { label:'Class Rep (CR)', value:counts.student,     color:'#0f9d58' },
+          { label:'Student',     value:counts.student,     color:'#0f9d58' },
         ].map(s=>(
           <div key={s.label} style={{ background:'#fff', border:'1px solid #ebebf0', borderRadius:12, padding:'16px', textAlign:'center', cursor:'pointer' }}
             onClick={()=>setFilterRole(filterRole===s.label.toLowerCase()&&s.label!=='Total'?'':s.label==='Total'?'':s.label.toLowerCase())}>
@@ -106,7 +107,7 @@ export default function Users() {
           <option value="admin">Admin</option>
           <option value="staff">Staff</option>
           <option value="invigilator">Invigilator</option>
-          <option value="student">Class Rep (CR)</option>
+          <option value="student">Student</option>
         </select>
       </div>
 
@@ -146,7 +147,7 @@ export default function Users() {
                     </td>
                     <td style={td}>
                       {dm ? (
-                        <span style={{ fontSize:12, color:dm.color, fontWeight:500 }}>{dm.icon} {u.department}</span>
+                        <span style={{ fontSize:12, color:dm.color, fontWeight:500, display:'inline-flex', alignItems:'center', gap:5 }}><DeptIcon department={u.department} size={13}/> {u.department}</span>
                       ) : (
                         <span style={{ fontSize:12, color:'#bbb' }}>—</span>
                       )}
@@ -201,7 +202,7 @@ export default function Users() {
                 <div>
                   <label style={lbl}>Role *</label>
                   <select value={form.role} onChange={e=>setForm({...form,role:e.target.value,department:''})} style={inp}>
-                    <option value="student">Class Rep (CR)</option>
+                    <option value="student">Student</option>
                     <option value="staff">Staff</option>
                     <option value="invigilator">Invigilator</option>
                     <option value="admin">Admin</option>
@@ -244,7 +245,7 @@ export default function Users() {
                 <div>
                   <label style={lbl}>Role</label>
                   <select value={editForm.role||'student'} onChange={e=>setEditForm({...editForm,role:e.target.value,department:''})} style={inp}>
-                    <option value="student">Class Rep (CR)</option>
+                    <option value="student">Student</option>
                     <option value="staff">Staff</option>
                     <option value="invigilator">Invigilator</option>
                     <option value="admin">Admin</option>
@@ -262,8 +263,8 @@ export default function Users() {
               </div>
               {editForm.role==='staff' && editForm.department && (
                 <div style={{ background:'#f7f7ff', border:'1px solid #ebebf0', borderRadius:8, padding:'12px 14px', fontSize:12 }}>
-                  <div style={{ fontWeight:600, color:'#16161f' }}>
-                    {DEPT_META[editForm.department]?.icon} {editForm.department} Staff — department-scoped access
+                  <div style={{ fontWeight:600, color:'#16161f', display:'flex', alignItems:'center', gap:6 }}>
+                    <DeptIcon department={editForm.department} size={15}/> {editForm.department} Staff — department-scoped access
                   </div>
                 </div>
               )}

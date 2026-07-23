@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLab } from '../context/LabContext';
 import BookingToast from './BookingToast';
+import DeptIcon from './DeptIcon';
 
 const NAV = {
   admin: [
@@ -128,18 +129,11 @@ export default function Layout({ children }) {
                       background: active ? '#eef2ff' : 'transparent',
                       whiteSpace:'nowrap',
                       position:'relative',
-                      borderRadius: collapsed ? 0 : 8,
-                      margin: collapsed ? 0 : '0 8px',
-                      width: collapsed ? '100%' : 'auto',
-                      transition:'background .15s ease, color .15s ease, transform .12s ease',
-                    }}
-                    onMouseEnter={e => { if (!active) { e.currentTarget.style.background = '#f4f4fb'; e.currentTarget.style.color = '#4f46e5'; } }}
-                    onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#7c7c8a'; } }}
-                    >
+                    }}>
                       {active && !collapsed && (
-                        <span style={{ position:'absolute', left:-8, top:2, bottom:2, width:2.5, borderRadius:2, background:'linear-gradient(180deg,#4f46e5,#7c3aed)' }} />
+                        <span style={{ position:'absolute', left:0, top:0, bottom:0, width:2.5, background:'#4f46e5' }} />
                       )}
-                      {collapsed ? <span className={active ? 'lc-live-dot' : ''} style={{width:5,height:5,borderRadius:'50%',background:active?'#4f46e5':'#ddd'}}/> : item.label}
+                      {collapsed ? <span style={{width:5,height:5,borderRadius:'50%',background:active?'#4f46e5':'#ddd'}}/> : item.label}
                     </Link>
                   );
                 })}
@@ -151,7 +145,7 @@ export default function Layout({ children }) {
         <div style={{ padding:14, borderTop:'1px solid #e9e9f0' }}>
           {!collapsed && (
             <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:10 }}>
-              <div style={{ width:28, height:28, borderRadius:'50%', background:'linear-gradient(135deg,#4f46e5,#7c3aed)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:12, color:'#fff', flexShrink:0, boxShadow:'0 2px 8px rgba(79,70,229,0.35)' }}>
+              <div style={{ width:28, height:28, borderRadius:'50%', background:'#4f46e5', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:12, color:'#fff', flexShrink:0 }}>
                 {user?.name?.[0]?.toUpperCase()}
               </div>
               <div style={{ overflow:'hidden' }}>
@@ -160,21 +154,18 @@ export default function Layout({ children }) {
                 {user?.role === 'staff' && user?.department && (
                   <div style={{ fontSize:10, color:'#0891b2', fontWeight:600, marginTop:2,
                     background:'#ecfeff', border:'1px solid #a5f3fc', borderRadius:4,
-                    padding:'1px 6px', display:'inline-block' }}>
-                    {user.department === 'Computer Science' ? '🖥️' : user.department === 'Physics' ? '⚛️' : '🧪'} {user.department}
+                    padding:'1px 6px', display:'inline-flex', alignItems:'center', gap:4 }}>
+                    <DeptIcon department={user.department} size={12}/> {user.department}
                   </div>
                 )}
               </div>
             </div>
           )}
-          <button onClick={() => { logout(); navigate('/login'); }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#dc2626'; e.currentTarget.style.color = '#dc2626'; e.currentTarget.style.background = '#fef2f2'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#e9e9f0'; e.currentTarget.style.color = '#7c7c8a'; e.currentTarget.style.background = 'transparent'; }}
-            style={{
+          <button onClick={() => { logout(); navigate('/login'); }} style={{
             width:'100%', padding:'7px', background:'transparent',
             border:'1px solid #e9e9f0', color:'#7c7c8a', borderRadius:8,
             cursor:'pointer', fontSize:12.5, fontWeight:500, display:'flex', alignItems:'center',
-            gap:6, justifyContent:'center', transition:'border-color .15s, color .15s, background .15s',
+            gap:6, justifyContent:'center',
           }}>
             {collapsed ? '\u23fb' : 'Sign out'}
           </button>
@@ -194,7 +185,7 @@ export default function Layout({ children }) {
 
         </div>
 
-       <main key={location.pathname} className="lc-page" style={{ flex:1, overflow:'auto' }}>
+       <main style={{ flex:1, overflow:'auto' }}>
           {children}
         </main>
       </div>

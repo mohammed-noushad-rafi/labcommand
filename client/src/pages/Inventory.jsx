@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
-import { sortDepts } from '../utils/deptOrder';
+import DeptIcon from '../components/DeptIcon';
 
 const DEPT_META = {
-  'Computer Science': { icon:'🖥️', color:'#4f46e5' },
-  'Physics':          { icon:'⚛️',  color:'#0891b2' },
-  'Chemistry':        { icon:'🧪', color:'#0f9d58' },
+  'Computer Science': { color:'#4f46e5' },
+  'Physics':          { color:'#0891b2' },
+  'Chemistry':        { color:'#0f9d58' },
 };
-function getMeta(n) { return DEPT_META[n] || { icon:'🏫', color:'#4f46e5' }; }
+function getMeta(n) { return DEPT_META[n] || { color:'#4f46e5' }; }
 
 const ITEM_CATALOG = {
   'Computer Science': [
@@ -95,7 +95,7 @@ function DeptLevel({ departments, inventory, onSelect }) {
               style={{ background:'#fff', border:'1px solid '+(lowItems>0?'#f5bcbc':'#ebebf0'), borderRadius:16, padding:'32px 28px', cursor:'pointer', transition:'all .15s ease' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor=meta.color; e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 8px 24px '+meta.color+'12'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor=lowItems>0?'#f5bcbc':'#ebebf0'; e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
-              <div style={{ fontSize:34, marginBottom:18 }}>{meta.icon}</div>
+              <div style={{ marginBottom:18 }}><DeptIcon department={d.department} size={34}/></div>
               <div style={{ fontSize:18, fontWeight:700, color:'#16161f', marginBottom:4 }}>{d.department}</div>
               <div style={{ fontSize:12, color:'#bbb', fontWeight:500 }}>{d.lab_count} lab{d.lab_count>1?'s':''}</div>
             </div>
@@ -114,7 +114,7 @@ function LabLevel({ dept, inventory, onSelect, onBack }) {
       <button onClick={onBack} style={backBtn}>← Back</button>
       <div style={{ marginBottom:36, marginTop:20 }}>
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-          <span style={{ fontSize:22 }}>{meta.icon}</span>
+          <DeptIcon department={dept.department} size={22}/>
           <span style={{ fontSize:11, color:'#bbb', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.08em' }}>{dept.department}</span>
         </div>
         <h1 style={{ fontSize:22, fontWeight:700, color:'#16161f', margin:0 }}>Select a lab</h1>
@@ -167,7 +167,6 @@ function LabInventory({ lab, dept, onBack, onBackToDept }) {
   const [editing,  setEditing]  = useState(null);
   const [nameInput,setNameInput]= useState('');
   const [catInput, setCatInput] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [form,     setForm]     = useState({
     lab_id:lab.id, item_name:'', category:'', quantity:0,
     min_threshold:5, unit:'pieces', supplier_name:'', supplier_contact:'',
@@ -181,11 +180,10 @@ function LabInventory({ lab, dept, onBack, onBackToDept }) {
 
   const openAdd = () => {
     setForm({ lab_id:lab.id, item_name:'', category:'', quantity:0, min_threshold:5, unit:'pieces', supplier_name:'', supplier_contact:'' });
-    setNameInput(''); setCatInput(''); setEditing(null); setShowAdvanced(false); setModal(true);
+    setNameInput(''); setCatInput(''); setEditing(null); setModal(true);
   };
   const openEdit = (item) => {
-    setForm({...item}); setNameInput(item.item_name); setCatInput(item.category||''); setEditing(item.id);
-    setShowAdvanced(!!(item.supplier_name || item.supplier_contact)); setModal(true);
+    setForm({...item}); setNameInput(item.item_name); setCatInput(item.category||''); setEditing(item.id); setModal(true);
   };
 
   const save = async () => {
@@ -353,26 +351,15 @@ function LabInventory({ lab, dept, onBack, onBackToDept }) {
                   <input type="number" min="0" value={form.min_threshold} onChange={e=>setForm({...form,min_threshold:parseInt(e.target.value)||0})} style={inp}/>
                   <div style={{ fontSize:10.5, color:'#bbb', marginTop:3 }}>Alert when stock falls below this</div>
                 </div>
-              </div>
-
-              <button type="button" onClick={()=>setShowAdvanced(!showAdvanced)}
-                style={{ background:'none', border:'none', padding:0, color:meta.color, fontSize:12.5, fontWeight:600, cursor:'pointer', textAlign:'left', display:'flex', alignItems:'center', gap:5 }}>
-                <span style={{ display:'inline-block', transition:'transform .15s', transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
-                {showAdvanced ? 'Hide' : 'Add'} supplier details (optional)
-              </button>
-
-              {showAdvanced && (
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, background:'#fafafd', border:'1px solid #ebebf0', borderRadius:10, padding:14 }}>
-                  <div>
-                    <label style={lbl}>Supplier name</label>
-                    <input value={form.supplier_name||''} onChange={e=>setForm({...form,supplier_name:e.target.value})} placeholder="e.g. Rohan Enterprises" style={inp}/>
-                  </div>
-                  <div>
-                    <label style={lbl}>Supplier contact</label>
-                    <input value={form.supplier_contact||''} onChange={e=>setForm({...form,supplier_contact:e.target.value})} placeholder="Phone or email" style={inp}/>
-                  </div>
+                <div>
+                  <label style={lbl}>Supplier name</label>
+                  <input value={form.supplier_name||''} onChange={e=>setForm({...form,supplier_name:e.target.value})} placeholder="e.g. Rohan Enterprises" style={inp}/>
                 </div>
-              )}
+                <div>
+                  <label style={lbl}>Supplier contact</label>
+                  <input value={form.supplier_contact||''} onChange={e=>setForm({...form,supplier_contact:e.target.value})} placeholder="Phone or email" style={inp}/>
+                </div>
+              </div>
 
               {form.quantity <= form.min_threshold && form.quantity >= 0 && (
                 <div style={{ background:'#fef2f2', border:'1px solid #f5bcbc', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#dc2626', fontWeight:600 }}>
@@ -402,7 +389,7 @@ export default function Inventory() {
 
   const loadAll = () => {
     Promise.all([
-      api.get('/labs/departments').then(r => setDepartments(sortDepts(r.data.data||[]))),
+      api.get('/labs/departments').then(r => setDepartments(r.data.data||[])),
       api.get('/inventory').then(r => setInventory(r.data.data||[])),
     ]).finally(() => setLoading(false));
   };

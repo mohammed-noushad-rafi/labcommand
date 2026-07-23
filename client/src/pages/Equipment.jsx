@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
-import { sortDepts } from '../utils/deptOrder';
 import { Badge } from '../components/Table';
 import Button from '../components/Button';
+import DeptIcon from '../components/DeptIcon';
 
 const DEPT_META = {
-  'Computer Science': { icon:'🖥️', color:'#4f46e5' },
-  'Physics':          { icon:'⚛️',  color:'#0891b2' },
-  'Chemistry':        { icon:'🧪', color:'#0f9d58' },
+  'Computer Science': { color:'#4f46e5' },
+  'Physics':          { color:'#0891b2' },
+  'Chemistry':        { color:'#0f9d58' },
 };
 
 const EQUIPMENT_CATALOG = {
@@ -45,33 +45,16 @@ const CATEGORY_CATALOG = {
   ],
 };
 
-// Generates the next serial number for a lab, in the form CS-L01-001.
-// Scans existing serials in this lab, finds the smallest unused sequence
-// number (so a deleted item's number gets reused by the next new item),
-// rather than a random or ever-increasing suffix.
-function generateSerial(dept, labName, existingEquip) {
+function generateSerial(dept, labName) {
   const prefix = dept === 'Computer Science' ? 'CS' : dept === 'Physics' ? 'PH' : 'CH';
-  const labNumMatch = labName.match(/\d+/);
-  const labNum = labNumMatch ? labNumMatch[0] : '1';
-  const labCode = 'L' + String(labNum).padStart(2, '0');
-  const serialPrefix = `${prefix}-${labCode}-`;
-
-  const used = new Set();
-  (existingEquip || []).forEach(item => {
-    if (item.serial_number && item.serial_number.startsWith(serialPrefix)) {
-      const n = parseInt(item.serial_number.slice(serialPrefix.length), 10);
-      if (!isNaN(n)) used.add(n);
-    }
-  });
-
-  let n = 1;
-  while (used.has(n)) n++;
-
-  return serialPrefix + String(n).padStart(3, '0');
+  const labNum = labName.match(/d+/) ? labName.match(/d+/)[0] : '1';
+  const rand = Math.random().toString(36).substr(2,4).toUpperCase();
+  const year = new Date().getFullYear().toString().substr(2);
+  return prefix + '-L' + labNum + '-' + year + '-' + rand;
 }
 
 function getMeta(name) {
-  return DEPT_META[name] || { icon:'🏫', color:'#4f46e5' };
+  return DEPT_META[name] || { color:'#4f46e5' };
 }
 
 const STATUS_COLOR = {
@@ -100,7 +83,7 @@ function DeptLevel({ departments, equipment, onSelect }) {
               style={{ background:'#fff', border:'1px solid #ebebf0', borderRadius:16, padding:'32px 28px', cursor:'pointer', transition:'all .15s ease' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor=meta.color; e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 8px 24px '+meta.color+'12'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor='#ebebf0'; e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
-              <div style={{ fontSize:34, marginBottom:18 }}>{meta.icon}</div>
+              <div style={{ marginBottom:18 }}><DeptIcon department={d.department} size={34}/></div>
               <div style={{ fontSize:18, fontWeight:700, color:'#16161f', marginBottom:4 }}>{d.department}</div>
               <div style={{ fontSize:12, color:'#bbb', fontWeight:500 }}>{d.lab_count} lab{d.lab_count>1?'s':''}</div>
             </div>
@@ -119,7 +102,7 @@ function LabLevel({ dept, equipment, onSelect, onBack }) {
       <button onClick={onBack} style={backBtn}>← Back</button>
       <div style={{ marginBottom:36, marginTop:20 }}>
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-          <span style={{ fontSize:22 }}>{meta.icon}</span>
+          <DeptIcon department={dept.department} size={22}/>
           <span style={{ fontSize:11, color:'#bbb', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.08em' }}>{dept.department}</span>
         </div>
         <h1 style={{ fontSize:22, fontWeight:700, color:'#16161f', margin:0 }}>Select a lab</h1>
@@ -207,7 +190,6 @@ function LabEquipment({ lab, dept, equipment, onBack, onBackToDept, onRefresh })
   const [editing,  setEditing]  = useState(null);
   const [nameInput,setNameInput]= useState('');
   const [showSugg, setShowSugg] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [form,     setForm]     = useState({
     lab_id: lab.id, name:'', category:'', serial_number:'',
     status:'working', purchase_date:'', last_service_date:'',
@@ -221,14 +203,12 @@ function LabEquipment({ lab, dept, equipment, onBack, onBackToDept, onRefresh })
     setForm({ lab_id:lab.id, name:'', category:'', serial_number:serial, status:'working', purchase_date:'', last_service_date:'', warranty_expiry_date:'', amc_vendor:'', amc_expiry_date:'' });
     setNameInput('');
     setEditing(null);
-    setShowAdvanced(false);
     setModal(true);
   };
 
   const openEdit = (item) => {
     setForm({ ...item, purchase_date:item.purchase_date?.split('T')[0]||'', last_service_date:item.last_service_date?.split('T')[0]||'', warranty_expiry_date:item.warranty_expiry_date?.split('T')[0]||'', amc_expiry_date:item.amc_expiry_date?.split('T')[0]||'' });
     setNameInput(item.name);
-    setShowAdvanced(!!(item.last_service_date || item.amc_vendor || item.amc_expiry_date));
     setEditing(item.id);
     setModal(true);
   };
@@ -419,33 +399,22 @@ function LabEquipment({ lab, dept, equipment, onBack, onBackToDept, onRefresh })
                   <input type="date" value={form.purchase_date} onChange={e=>setForm({...form,purchase_date:e.target.value})} style={inp}/>
                 </div>
                 <div>
+                  <label style={label}>Last service date</label>
+                  <input type="date" value={form.last_service_date} onChange={e=>setForm({...form,last_service_date:e.target.value})} style={inp}/>
+                </div>
+                <div>
                   <label style={label}>Warranty expiry</label>
                   <input type="date" value={form.warranty_expiry_date} onChange={e=>setForm({...form,warranty_expiry_date:e.target.value})} style={inp}/>
                 </div>
-              </div>
-
-              <button type="button" onClick={()=>setShowAdvanced(!showAdvanced)}
-                style={{ background:'none', border:'none', padding:0, color:'#4f46e5', fontSize:12.5, fontWeight:600, cursor:'pointer', textAlign:'left', display:'flex', alignItems:'center', gap:5 }}>
-                <span style={{ display:'inline-block', transition:'transform .15s', transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
-                {showAdvanced ? 'Hide' : 'Add'} AMC & service details (optional)
-              </button>
-
-              {showAdvanced && (
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, background:'#fafafd', border:'1px solid #ebebf0', borderRadius:10, padding:14 }}>
-                  <div>
-                    <label style={label}>Last service date</label>
-                    <input type="date" value={form.last_service_date} onChange={e=>setForm({...form,last_service_date:e.target.value})} style={inp}/>
-                  </div>
-                  <div>
-                    <label style={label}>AMC vendor</label>
-                    <input value={form.amc_vendor||''} onChange={e=>setForm({...form,amc_vendor:e.target.value})} placeholder="Vendor name" style={inp}/>
-                  </div>
-                  <div>
-                    <label style={label}>AMC expiry</label>
-                    <input type="date" value={form.amc_expiry_date||''} onChange={e=>setForm({...form,amc_expiry_date:e.target.value})} style={inp}/>
-                  </div>
+                <div>
+                  <label style={label}>AMC vendor</label>
+                  <input value={form.amc_vendor||''} onChange={e=>setForm({...form,amc_vendor:e.target.value})} placeholder="Vendor name" style={inp}/>
                 </div>
-              )}
+                <div>
+                  <label style={label}>AMC expiry</label>
+                  <input type="date" value={form.amc_expiry_date||''} onChange={e=>setForm({...form,amc_expiry_date:e.target.value})} style={inp}/>
+                </div>
+              </div>
             </div>
 
             <div style={{ display:'flex', gap:10, marginTop:28, justifyContent:'flex-end' }}>
@@ -470,7 +439,7 @@ export default function Equipment() {
 
   const loadAll = () => {
     Promise.all([
-      api.get('/labs/departments').then(r => setDepartments(sortDepts(r.data.data || []))),
+      api.get('/labs/departments').then(r => setDepartments(r.data.data || [])),
       api.get('/equipment').then(r => setEquipment(r.data.data || [])),
     ]).finally(() => setLoading(false));
   };

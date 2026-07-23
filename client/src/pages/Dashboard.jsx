@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
+import DeptIcon from '../components/DeptIcon';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import EmptyState from '../components/EmptyState';
 
@@ -14,13 +15,13 @@ const PALETTE = [
 ];
 
 const DEPT_META = {
-  'Computer Science': { icon:'🖥️', color:'#4f46e5' },
-  'Physics':          { icon:'⚛️',  color:'#0891b2' },
-  'Chemistry':        { icon:'🧪', color:'#0f9d58' },
+  'Computer Science': { color:'#4f46e5' },
+  'Physics':          { color:'#0891b2' },
+  'Chemistry':        { color:'#0f9d58' },
 };
 
 function getMeta(name) {
-  return DEPT_META[name] || { icon:'🏫', color:'#4f46e5' };
+  return DEPT_META[name] || { color:'#4f46e5' };
 }
 
 // LEVEL 1 — Department cards
@@ -41,7 +42,7 @@ function DeptLevel({ departments, onSelect }) {
               style={{ background:'#fff', border:'1px solid #ebebf0', borderRadius:16, padding:'28px 24px', cursor:'pointer', transition:'all .15s ease' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = meta.color; e.currentTarget.style.boxShadow = '0 8px 28px ' + meta.color + '14'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = '#ebebf0'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}>
-              <div style={{ fontSize:32, marginBottom:16 }}>{meta.icon}</div>
+              <div style={{ marginBottom:16 }}><DeptIcon department={d.department} size={32}/></div>
               <div style={{ fontSize:17, fontWeight:700, color:'#16161f', marginBottom:6 }}>{d.department}</div>
 
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -64,7 +65,7 @@ function LabLevel({ dept, onSelect, onBack }) {
       <button onClick={onBack} style={backBtn}>← Back</button>
       <div style={{ marginBottom:36, marginTop:20 }}>
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-          <span style={{ fontSize:22 }}>{meta.icon}</span>
+          <DeptIcon department={dept.department} size={22}/>
           <span style={{ fontSize:11, color:'#bbb', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.08em' }}>{dept.department}</span>
         </div>
         <h1 style={{ fontSize:22, fontWeight:700, color:'#16161f', margin:0, letterSpacing:'-0.01em' }}>Select a lab</h1>
@@ -231,15 +232,9 @@ export default function Dashboard() {
   const [lab,  setLab]  = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const DEPT_ORDER = ['Computer Science', 'Chemistry', 'Physics'];
-
   useEffect(() => {
     api.get('/labs/departments')
-      .then(r => {
-        const data = r.data.data || [];
-        data.sort((a, b) => DEPT_ORDER.indexOf(a.department) - DEPT_ORDER.indexOf(b.department));
-        setDepartments(data);
-      })
+      .then(r => setDepartments(r.data.data || []))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);

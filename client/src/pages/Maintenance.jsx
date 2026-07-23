@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
-import { sortDepts } from '../utils/deptOrder';
+import DeptIcon from '../components/DeptIcon';
 
 const DEPT_META = {
-  'Computer Science': { icon:'🖥️', color:'#4f46e5' },
-  'Physics':          { icon:'⚛️',  color:'#0891b2' },
-  'Chemistry':        { icon:'🧪', color:'#0f9d58' },
+  'Computer Science': { color:'#4f46e5' },
+  'Physics':          { color:'#0891b2' },
+  'Chemistry':        { color:'#0f9d58' },
 };
-function getMeta(n) { return DEPT_META[n] || { icon:'🏫', color:'#4f46e5' }; }
+function getMeta(n) { return DEPT_META[n] || { color:'#4f46e5' }; }
 
 const STATUS_STYLE = {
   scheduled:   { bg:'#eff5fe', color:'#2563eb', border:'#bfdbfe' },
@@ -69,7 +69,7 @@ function DeptLevel({ departments, maintenance, onSelect }) {
               style={{ background:'#fff', border:'1px solid #ebebf0', borderRadius:16, padding:'32px 28px', cursor:'pointer', transition:'all .15s ease' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor=meta.color; e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 8px 24px '+meta.color+'12'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor='#ebebf0'; e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
-              <div style={{ fontSize:34, marginBottom:18 }}>{meta.icon}</div>
+              <div style={{ marginBottom:18 }}><DeptIcon department={d.department} size={34}/></div>
               <div style={{ fontSize:18, fontWeight:700, color:'#16161f', marginBottom:4 }}>{d.department}</div>
               <div style={{ fontSize:12, color:'#bbb', fontWeight:500 }}>{d.lab_count} lab{d.lab_count>1?'s':''}</div>
             </div>
@@ -88,7 +88,7 @@ function LabLevel({ dept, maintenance, onSelect, onBack }) {
       <button onClick={onBack} style={backBtn}>← Back</button>
       <div style={{ marginBottom:36, marginTop:20 }}>
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-          <span style={{ fontSize:22 }}>{meta.icon}</span>
+          <DeptIcon department={dept.department} size={22}/>
           <span style={{ fontSize:11, color:'#bbb', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.08em' }}>{dept.department}</span>
         </div>
         <h1 style={{ fontSize:22, fontWeight:700, color:'#16161f', margin:0 }}>Select a lab</h1>
@@ -425,7 +425,7 @@ export default function Maintenance() {
 
   const loadAll = () => {
     Promise.all([
-      api.get('/labs/departments').then(r => setDepartments(sortDepts(r.data.data || []))),
+      api.get('/labs/departments').then(r => setDepartments(r.data.data || [])),
       api.get('/maintenance').then(r => setMaintenance(r.data.data || [])),
     ]).finally(() => setLoading(false));
   };
