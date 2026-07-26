@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
 import DeptIcon from '../components/DeptIcon';
+import { sortDepts } from '../utils/deptOrder';
 
 const DEPT_META = {
   'Computer Science': { color:'#4f46e5' },
@@ -425,7 +426,7 @@ export default function Maintenance() {
 
   const loadAll = () => {
     Promise.all([
-      api.get('/labs/departments').then(r => setDepartments(r.data.data || [])),
+      api.get('/labs/departments').then(r => setDepartments(sortDepts(r.data.data || []))),
       api.get('/maintenance').then(r => setMaintenance(r.data.data || [])),
     ]).finally(() => setLoading(false));
   };

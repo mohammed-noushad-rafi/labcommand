@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import DeptIcon from '../components/DeptIcon';
+import { sortDepts } from '../utils/deptOrder';
 
 const DEPT_META = {
   'Computer Science': { color:'#4f46e5', hasComputers:true },
@@ -397,7 +398,7 @@ export default function ExamSetup() {
 
   const loadAll = () => {
     Promise.all([
-      api.get('/labs/departments').then(r => setDepartments(r.data.data||[])),
+      api.get('/labs/departments').then(r => setDepartments(sortDepts(r.data.data||[]))),
       api.get('/exams').then(r => setSessions(r.data.data||[])),
     ]).finally(() => setLoading(false));
   };

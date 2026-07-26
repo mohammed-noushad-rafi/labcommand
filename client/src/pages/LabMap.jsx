@@ -4,6 +4,7 @@ import { io } from 'socket.io-client';
 import { API_URL } from '../config';
 import api from '../api/axios';
 import DeptIcon from '../components/DeptIcon';
+import { sortDepts } from '../utils/deptOrder';
 
 const STATUS_COLOR = {
   online:    { bg:'#eefbf3', border:'#bce8cc', dot:'#0f9d58', label:'Online' },
@@ -106,7 +107,7 @@ export default function LabMap() {
     Promise.all([
       api.get('/machines').then(r => setMachines(r.data.data || [])),
       api.get('/equipment').then(r => setEquipment(r.data.data || [])),
-      api.get('/labs/departments').then(r => setDepartments(r.data.data || [])),
+      api.get('/labs/departments').then(r => setDepartments(sortDepts(r.data.data || []))),
     ]).finally(() => setLoading(false));
     return () => socketRef.current?.disconnect();
   }, []);

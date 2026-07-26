@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import DeptIcon from '../components/DeptIcon';
+import { sortDepts } from '../utils/deptOrder';
 
 const DEPT_META = {
   'Computer Science': { color:'#4f46e5' },
@@ -127,32 +128,33 @@ function LabLevel({ dept, slots, onSelect, onBack }) {
 function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user }) {
   const meta = getMeta(dept.department);
   const [date,       setDate]       = useState(today());
-  const [myBookings, setMyBookings] = useState([]);
   const [modal,      setModal]      = useState(false);
   const [users,      setUsers]      = useState([]);
-  const [form,       setForm]       = useState({ lab_id:lab.id, date:today(), start_time:'', end_time:'', purpose:'', assigned_to:'', assigned_name:'', notes:'' });
-  const [userSearch,   setUserSearch]   = useState('');
-  const [showUsers,    setShowUsers]    = useState(false);
   const [assignedUser, setAssignedUser] = useState(null);
   const [loading,    setLoading]    = useState(false);
   const [purposeInput, setPurposeInput] = useState('');
+  const [form,       setForm]       = useState({ lab_id:lab.id, date:today(), start_time:'', end_time:'', notes:'' });
+
+  useEffect(() => {
+    api.get('/users/assignable').then(r => setUsers(r.data.data || [])).catch(() => {});
+  }, []);
 
   const labSlots = allSlots.filter(s => s.lab_id===lab.id && s.date?.split('T')[0]===date && s.status!=='cancelled');
-  const myLabSlots = allSlots.filter(s => s.lab_id===lab.id);
 
   const isBooked = (start, end) => labSlots.some(s => s.start_time<=start && s.end_time>=end);
 
   const openBook = (start) => {
     const endIdx = TIME_SLOTS.indexOf(start) + 1;
     const end = TIME_SLOTS[endIdx] || '18:00';
-    setForm({ lab_id:lab.id, date, start_time:start, end_time:end, purpose:'' });
+    setForm({ lab_id:lab.id, date, start_time:start, end_time:end, notes:'' });
     setPurposeInput('');
+    setAssignedUser(null);
     setModal(true);
   };
 
   const save = async () => {
-    if (!form.start_time||!form.end_time) return alert('Please select time');
-    const purpose = purposeInput || form.purpose;
+    if (!form.start_time || !form.end_time) return alert('Please select time');
+    const purpose = purposeInput;
     if (!purpose) return alert('Please enter purpose');
     setLoading(true);
     try {
@@ -164,7 +166,7 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
       });
       setModal(false);
       onRefresh();
-    } catch (err) { alert(err.response?.data?.message||'Error'); }
+    } catch (err) { alert(err.response?.data?.message || 'Error'); }
     finally { setLoading(false); }
   };
 
@@ -185,6 +187,12 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
       : true
   ));
 
+  // Only people in this lab's own department can be assigned — auto-scoped,
+  // no separate department picker needed.
+  const assignableUsers = users.filter(u =>
+    u.department === dept.department && ['student','invigilator'].includes(u.role)
+  );
+
   return (
     <div>
       <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:28, flexWrap:'wrap' }}>
@@ -201,7 +209,7 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
           <h1 style={{ fontSize:22, fontWeight:700, color:'#16161f', margin:0 }}>{lab.name}</h1>
           <p style={{ fontSize:13, color:'#9494a3', marginTop:4 }}>Capacity: {lab.capacity} seats · Click an available slot to book</p>
         </div>
-        <button onClick={() => setModal(true)} style={{ background:meta.color, color:'#fff', border:'none', borderRadius:10, padding:'10px 18px', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+        <button onClick={() => openBook('')} style={{ background:meta.color, color:'#fff', border:'none', borderRadius:10, padding:'10px 18px', fontSize:13, fontWeight:600, cursor:'pointer' }}>
           + Book a slot
         </button>
       </div>
@@ -351,39 +359,23 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
 
               {(user.role==='admin'||user.role==='staff') && (
                 <div>
-                  <label style={lbl}>Assign to (optional)</label>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                    <div>
-                      <label style={{ fontSize:11, color:'#bbb', display:'block', marginBottom:5 }}>Department</label>
-                      <select value={userSearch} onChange={e=>{setUserSearch(e.target.value);setAssignedUser(null);}}
-                        style={{ ...inp, color: userSearch?'#16161f':'#bbb' }}>
-                        <option value="">Select department</option>
-                        <option value="Computer Science">Computer Science</option>
-                        <option value="Physics">Physics</option>
-                        <option value="Chemistry">Chemistry</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ fontSize:11, color:'#bbb', display:'block', marginBottom:5 }}>Person</label>
-                      <select value={assignedUser?.id||''} onChange={e=>{
-                        const u = users.find(u=>u.id===parseInt(e.target.value));
-                        setAssignedUser(u||null);
-                      }} disabled={!userSearch}
-                        style={{ ...inp, color: assignedUser?'#16161f':'#bbb', opacity:userSearch?1:0.5 }}>
-                        <option value="">{userSearch?'Select person':'Select dept first'}</option>
-                        {users.filter(u=>u.department===userSearch&&u.is_active&&['student','invigilator'].includes(u.role)).map(u=>(
-                          <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
+                  <label style={lbl}>Assign to — {dept.department} (optional)</label>
+                  <select value={assignedUser?.id||''} onChange={e=>{
+                    const u = assignableUsers.find(u=>u.id===parseInt(e.target.value));
+                    setAssignedUser(u||null);
+                  }} style={{ ...inp, color: assignedUser?'#16161f':'#bbb' }}>
+                    <option value="">Select person ({dept.department})</option>
+                    {assignableUsers.map(u=>(
+                      <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                    ))}
+                  </select>
                   {assignedUser && (
                     <div style={{ background:'#eef2ff', border:'1px solid #c7d2fe', borderRadius:8, padding:'10px 14px', marginTop:8, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                       <div>
                         <div style={{ fontSize:13, fontWeight:600, color:'#4f46e5' }}>✓ {assignedUser.name}</div>
                         <div style={{ fontSize:11, color:'#9494a3', marginTop:2 }}>{assignedUser.role} · {assignedUser.department}</div>
                       </div>
-                      <button onClick={()=>{setAssignedUser(null);setUserSearch('');}}
+                      <button onClick={()=>setAssignedUser(null)}
                         style={{ background:'none', border:'none', cursor:'pointer', color:'#bbb', fontSize:18, lineHeight:1 }}>×</button>
                     </div>
                   )}
@@ -394,8 +386,6 @@ function LabBooking({ lab, dept, allSlots, onBack, onBackToDept, onRefresh, user
                 <label style={lbl}>Notes (optional)</label>
                 <input value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Any additional notes..." style={inp}/>
               </div>
-
-
             </div>
             <div style={{ display:'flex', gap:10, marginTop:24, justifyContent:'flex-end' }}>
               <button onClick={()=>setModal(false)} style={{ background:'none', border:'1px solid #ebebf0', borderRadius:10, padding:'10px 18px', fontSize:13, cursor:'pointer', color:'#555' }}>Cancel</button>
@@ -420,14 +410,12 @@ export default function Booking() {
 
   const loadAll = () => {
     Promise.all([
-      api.get('/labs/departments').then(r => setDepartments(r.data.data||[])),
-      api.get('/booking').then(r => setSlots(r.data.data||[])),
+      api.get('/labs/departments').then(r => setDepartments(sortDepts(r.data.data || []))),
+      api.get('/booking').then(r => setSlots(r.data.data || [])),
     ]).finally(() => setLoading(false));
   };
-  useEffect(() => {
-    loadAll();
-    api.get('/users').then(r => setUsers(r.data.data||[])).catch(()=>{});
-  }, []);
+
+  useEffect(() => { loadAll(); }, []);
 
   if (loading) return <div style={{ padding:60, textAlign:'center', color:'#c4c4cc', fontSize:13 }}>Loading</div>;
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
 import DeptIcon from '../components/DeptIcon';
+import { sortDepts } from '../utils/deptOrder';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import EmptyState from '../components/EmptyState';
 
@@ -234,7 +235,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     api.get('/labs/departments')
-      .then(r => setDepartments(r.data.data || []))
+      .then(r => setDepartments(sortDepts(r.data.data || [])))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
