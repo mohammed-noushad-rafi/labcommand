@@ -19,6 +19,7 @@ import EmailLog from './pages/EmailLog';
 import Analytics from './pages/Analytics';
 import Predictions from './pages/AIPredictions';
 import Classroom from './pages/Classroom';
+import ChangePassword from './pages/ChangePassword';
 import { LabProvider } from './context/LabContext';
 
 function PrivateRoute({ children, roles }) {
@@ -59,6 +60,7 @@ function AppRoutes() {
       <Route path="/users"   element={<PrivateRoute roles={['admin']}><Users /></PrivateRoute>} />
       <Route path="/emaillog" element={<PrivateRoute roles={['admin','staff']}><EmailLog /></PrivateRoute>} />
       <Route path="/audit"   element={<PrivateRoute roles={['admin']}><AuditLog /></PrivateRoute>} />
+      <Route path="/change-password" element={<PrivateRoute><ChangePassword /></PrivateRoute>} />
       <Route path="/" element={<Navigate to={user ? (user.role === 'student' || user.role === 'invigilator' ? '/booking' : '/dashboard') : '/login'} />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>

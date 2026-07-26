@@ -161,6 +161,17 @@ export default function Layout({ children }) {
               </div>
             </div>
           )}
+          {!collapsed && (
+            <button onClick={() => navigate('/change-password')} style={{
+              width:'100%', padding:'6px', background:'transparent', border:'none',
+              color:'#9494a3', cursor:'pointer', fontSize:11.5, fontWeight:500,
+              textAlign:'left', marginBottom:6,
+            }}
+              onMouseEnter={e => e.currentTarget.style.color = '#4f46e5'}
+              onMouseLeave={e => e.currentTarget.style.color = '#9494a3'}>
+              Change password
+            </button>
+          )}
           <button onClick={() => { logout(); navigate('/login'); }} style={{
             width:'100%', padding:'7px', background:'transparent',
             border:'1px solid #e9e9f0', color:'#7c7c8a', borderRadius:8,

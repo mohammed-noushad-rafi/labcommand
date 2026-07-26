@@ -37,6 +37,9 @@ async function sendBookingNotification({ lab_name, user_name, date, start_time, 
 module.exports = { sendBookingNotification };
 
 async function sendWelcomeEmail({ name, email, password, role, department }) {
+  // CLIENT_URL may be a comma-separated list (see server/index.js CORS setup);
+  // use the first one as the canonical link in emails.
+  const loginUrl = (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].trim();
   const deptText = department ? ` (${department} Department)` : '';
   const roleLabel = role.charAt(0).toUpperCase() + role.slice(1);
   const html = `
@@ -68,9 +71,11 @@ async function sendWelcomeEmail({ name, email, password, role, department }) {
         </table>
         <div style="margin-top:20px;padding:12px 16px;background:#f5f4fe;border-radius:8px;border-left:4px solid #4f46e5">
           <p style="margin:0;font-size:13px;color:#4f46e5;font-weight:500">
-            Login at: <a href="http://localhost:5173" style="color:#4f46e5">LabCommand Portal</a>
+            Login at: <a href="${loginUrl}" style="color:#4f46e5">LabCommand Portal</a>
           </p>
-          <p style="margin:6px 0 0;font-size:12px;color:#7c7c8a">Please change your password after first login.</p>
+          <p style="margin:6px 0 0;font-size:12px;color:#7c7c8a">
+            For your security, please <a href="${loginUrl}/change-password" style="color:#4f46e5">change your password</a> after logging in for the first time.
+          </p>
         </div>
       </div>
       <div style="padding:14px 28px;background:#fafafd;border-top:1px solid #f0f0f6">
