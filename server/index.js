@@ -1,8 +1,14 @@
 const express = require('express');
 const cors    = require('cors');
 const http    = require('http');
+const dns     = require('dns');
 const { Server } = require('socket.io');
 require('dotenv').config();
+
+// Railway's network has broken outbound IPv6 routing to some external hosts
+// (observed with Gmail's SMTP servers, ENETUNREACH). Preferring IPv4 for all
+// outbound connections avoids this app-wide. No effect on local dev.
+dns.setDefaultResultOrder('ipv4first');
 
 // CLIENT_URL supports one or more comma-separated origins, e.g.
 // "http://localhost:5173,http://10.71.41.157:5173" — add every address the
@@ -67,6 +73,12 @@ io.on('connection', (socket) => {
     const { machineId, hostname, ip, os } = data;
     agentRegistry.set(machineId, socket);
     socket.machineId = machineId;
+  
+  socket.on('exam:violation', async (data) => {
+    const { sessionId, machineId, studentName, eventType, metadata } = data;
+    const { processViolation } = require('./utils/trustScore');
+    await processViolation(sessionId, machineId, studentName, eventType, metadata);
+  });  
 
     const pool = require('./db/connection');
     await pool.query(
@@ -77,57 +89,6 @@ io.on('connection', (socket) => {
 
     io.emit('machine:status', { machineId, status: 'online', hostname, ip });
     console.log(`Agent registered: ${hostname} (${ip})`);
-  });
-
-  // Violations reported directly by a student's exam browser tab (tab switch, paste, devtools, etc).
-  socket.on('exam:violation', async (data) => {
-    const { sessionId, machineId, studentName, eventType, metadata } = data;
-    const { processViolation } = require('./utils/trustScore');
-    await processViolation(sessionId, machineId, studentName, eventType, metadata);
-  });
-
-  // Violations reported by the machine agent itself (USB device, extra monitor, etc).
-  // The agent only knows its machineId, not which exam session is active on it —
-  // so we resolve that from the currently-active exam_trust_scores row for this machine.
-  socket.on('agent:violation', async (data) => {
-    const { machineId, eventType, metadata } = data;
-    const pool = require('./db/connection');
-    const { processViolation } = require('./utils/trustScore');
-
-    const { rows } = await pool.query(
-      `SELECT ts.session_id, ts.student_name
-       FROM exam_trust_scores ts
-       JOIN exam_sessions es ON es.id = ts.session_id
-       WHERE ts.machine_id = $1 AND es.status = 'active' AND ts.is_locked = false
-       ORDER BY ts.updated_at DESC LIMIT 1`,
-      [machineId]
-    );
-
-    if (rows.length) {
-      await processViolation(rows[0].session_id, machineId, rows[0].student_name, eventType, metadata);
-    }
-  });
-
-  // Live exam-room screenshot feed — relayed straight through, not persisted.
-  socket.on('agent:screenshot', (data) => {
-    const { machineId, image } = data;
-    io.emit('exam:screenshot', { machineId, image, ts: Date.now() });
-  });
-
-  // A browser client opened a machine's detail page — tell that specific
-  // agent to switch into fast-capture live-mirror mode. Re-sent every ~60s
-  // by the client as a heartbeat while the page stays open (renews the
-  // agent's own safety auto-stop timer, in case the tab is closed uncleanly).
-  socket.on('client:watch', ({ machineId }) => {
-    socket.watchingMachineId = machineId; // remembered so we can stop it on abrupt disconnect
-    const agentSocket = agentRegistry.get(machineId);
-    if (agentSocket) agentSocket.emit('command', { type: 'stream_start' });
-  });
-
-  socket.on('client:unwatch', ({ machineId }) => {
-    socket.watchingMachineId = null;
-    const agentSocket = agentRegistry.get(machineId);
-    if (agentSocket) agentSocket.emit('command', { type: 'stream_stop' });
   });
 
   socket.on('agent:telemetry', async (data) => {
@@ -168,10 +129,6 @@ io.on('connection', (socket) => {
       );
       io.emit('machine:status', { machineId: socket.machineId, status: 'offline' });
       console.log(`Agent disconnected: machine ${socket.machineId}`);
-    }
-    if (socket.watchingMachineId) {
-      const agentSocket = agentRegistry.get(socket.watchingMachineId);
-      if (agentSocket) agentSocket.emit('command', { type: 'stream_stop' });
     }
   });
 });

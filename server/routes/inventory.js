@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
       FROM inventory i
       LEFT JOIN labs l ON i.lab_id = l.id WHERE 1=1`;
     const params = [];
-    if (lab_id) { params.push(lab_id); q += ` AND i.lab_id=${params.length}`; }
+    if (lab_id) { params.push(lab_id); q += ` AND i.lab_id=$${params.length}`; }
     q += ' ORDER BY is_low DESC, i.item_name';
     const { rows } = await pool.query(q, params);
     res.json({ success: true, data: rows });

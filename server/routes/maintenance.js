@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
       JOIN equipment e ON m.equipment_id = e.id
       JOIN labs l ON e.lab_id = l.id WHERE 1=1`;
     const params = [];
-    if (lab_id) { params.push(lab_id); q += ` AND l.id=${params.length}`; }
+    if (lab_id) { params.push(lab_id); q += ` AND l.id=$${params.length}`; }
     q += ' ORDER BY m.scheduled_date ASC';
     const { rows } = await pool.query(q, params);
     res.json({ success: true, data: rows });

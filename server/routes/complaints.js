@@ -20,8 +20,8 @@ router.get('/', async (req, res) => {
              LEFT JOIN users u2 ON c.assigned_to = u2.id
              WHERE 1=1`;
     const params = [];
-    if (role === 'student') { params.push(id); q += ` AND c.raised_by=${params.length}`; }
-    if (lab_id) { params.push(lab_id); q += ` AND l.id=${params.length}`; }
+    if (role === 'student') { params.push(id); q += ` AND c.raised_by=$${params.length}`; }
+    if (lab_id) { params.push(lab_id); q += ` AND l.id=$${params.length}`; }
     q += ' ORDER BY c.created_at DESC';
     const { rows } = await pool.query(q, params);
     res.json({ success: true, data: rows });

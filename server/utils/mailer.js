@@ -1,12 +1,17 @@
 const nodemailer = require('nodemailer');
 const pool = require('../db/connection');
 
+// Railway's network can have broken outbound IPv6 routing to Gmail's SMTP
+// servers, causing ENETUNREACH errors even though IPv4 works fine. Forcing
+// IPv4 here avoids that entirely — safe to do everywhere since it doesn't
+// affect local dev (IPv4 always works there too).
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  family: 4,
 });
 
 async function sendBookingNotification({ lab_name, user_name, date, start_time, end_time, purpose, assigned_to, recipients }) {
