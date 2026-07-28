@@ -70,15 +70,13 @@ io.on('connection', (socket) => {
   console.log('Socket connected:', socket.id);
 
   socket.on('agent:register', async (data) => {
-    const { machineId, hostname, ip, os } = data;
+    // Coerce to Number consistently — agentRegistry keys must match exactly
+    // what client:watch/unwatch send, or Map.get() silently returns undefined
+    // and 'stream_start' never reaches the agent (no error, just nothing happens).
+    const machineId = Number(data.machineId);
+    const { hostname, ip, os } = data;
     agentRegistry.set(machineId, socket);
     socket.machineId = machineId;
-  
-  socket.on('exam:violation', async (data) => {
-    const { sessionId, machineId, studentName, eventType, metadata } = data;
-    const { processViolation } = require('./utils/trustScore');
-    await processViolation(sessionId, machineId, studentName, eventType, metadata);
-  });  
 
     const pool = require('./db/connection');
     await pool.query(
@@ -89,6 +87,38 @@ io.on('connection', (socket) => {
 
     io.emit('machine:status', { machineId, status: 'online', hostname, ip });
     console.log(`Agent registered: ${hostname} (${ip})`);
+  });
+
+  socket.on('exam:violation', async (data) => {
+    const { sessionId, machineId, studentName, eventType, metadata } = data;
+    const { processViolation } = require('./utils/trustScore');
+    await processViolation(sessionId, machineId, studentName, eventType, metadata);
+  });
+
+  socket.on('agent:screenshot', (data) => {
+    // Relay straight through to any client currently viewing this machine.
+    io.emit('exam:screenshot', data);
+  });
+
+  // A browser tab viewing a machine's live screen (MachineDetail, Classroom
+  // mode, or the exam war room) asks to start/stop receiving screenshots.
+  socket.on('client:watch', ({ machineId }) => {
+    const id = Number(machineId);
+    if (!socket.watchingMachineIds) socket.watchingMachineIds = new Set();
+    socket.watchingMachineIds.add(id);
+    const agentSocket = agentRegistry.get(id);
+    if (agentSocket) {
+      agentSocket.emit('command', { type: 'stream_start' });
+    }
+  });
+
+  socket.on('client:unwatch', ({ machineId }) => {
+    const id = Number(machineId);
+    if (socket.watchingMachineIds) socket.watchingMachineIds.delete(id);
+    const agentSocket = agentRegistry.get(id);
+    if (agentSocket) {
+      agentSocket.emit('command', { type: 'stream_stop' });
+    }
   });
 
   socket.on('agent:telemetry', async (data) => {
@@ -120,6 +150,14 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', async () => {
+    // If this browser tab was watching a machine's live feed, tell that
+    // agent to stop streaming so it doesn't keep capturing for nobody.
+    if (socket.watchingMachineIds) {
+      for (const id of socket.watchingMachineIds) {
+        const agentSocket = agentRegistry.get(id);
+        if (agentSocket) agentSocket.emit('command', { type: 'stream_stop' });
+      }
+    }
     if (socket.machineId) {
       agentRegistry.delete(socket.machineId);
       const pool = require('./db/connection');
