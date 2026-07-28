@@ -39,7 +39,11 @@ export default function Classroom() {
   const [loading,      setLoading]      = useState(false);
   const [log,          setLog]          = useState([]);
   const [showTemplates,setShowTemplates]= useState(false);
+  const [screenshots, setScreenshots] = useState({}); // machineId -> { image, ts }
+  const [zoomed, setZoomed] = useState(null); // machine object currently enlarged
   const socketRef = useRef(null);
+  const machinesRef = useRef([]);
+  useEffect(() => { machinesRef.current = machines; }, [machines]);
 
   useEffect(() => {
     api.get('/labs/departments').then(r => {
@@ -56,8 +60,31 @@ export default function Classroom() {
     socketRef.current.on('machine:telemetry', ({ machineId, cpu, ram }) => {
       setMachines(prev => prev.map(m => m.id === machineId ? { ...m, cpu_percent:cpu, ram_percent:ram } : m));
     });
+    socketRef.current.on('exam:screenshot', (data) => {
+      setScreenshots(prev => ({ ...prev, [data.machineId]: { image: data.image, ts: data.ts } }));
+    });
     return () => socketRef.current?.disconnect();
   }, []);
+
+  // Live-mirror every online/locked machine in the currently selected lab.
+  // Heartbeat every 60s picks up machines that come online mid-view;
+  // everything is unwatched cleanly when leaving this lab or the page.
+  useEffect(() => {
+    if (!selectedLab || !socketRef.current) return;
+    const watchAll = () => {
+      machinesRef.current
+        .filter(m => m.lab_id === selectedLab.id && ['online','locked','exam','classroom'].includes(m.status))
+        .forEach(m => socketRef.current?.emit('client:watch', { machineId: m.id }));
+    };
+    watchAll();
+    const heartbeat = setInterval(watchAll, 60000);
+    return () => {
+      clearInterval(heartbeat);
+      machinesRef.current
+        .filter(m => m.lab_id === selectedLab.id)
+        .forEach(m => socketRef.current?.emit('client:unwatch', { machineId: m.id }));
+    };
+  }, [selectedLab?.id]);
 
   const labMachines = selectedLab ? machines.filter(m => m.lab_id === selectedLab.id) : [];
   const onlineCount = labMachines.filter(m => m.status === 'online' || m.status === 'classroom').length;
@@ -294,6 +321,20 @@ export default function Classroom() {
                   <div key={m.id} style={{ background:st.bg, border:'1.5px solid '+st.border, borderRadius:13, padding:'14px 12px', transition:'transform .1s' }}
                     onMouseEnter={e => e.currentTarget.style.transform='translateY(-2px)'}
                     onMouseLeave={e => e.currentTarget.style.transform=''}>
+                    {(m.status === 'online' || m.status === 'classroom') && (
+                      screenshots[m.id] ? (
+                        <img
+                          src={`data:image/jpeg;base64,${screenshots[m.id].image}`}
+                          onClick={() => setZoomed(m)}
+                          style={{ width:'100%', aspectRatio:'16/10', objectFit:'cover', borderRadius:8, marginBottom:8, cursor:'zoom-in', display:'block', border:'1px solid rgba(0,0,0,0.06)' }}
+                          alt="Live screen"
+                        />
+                      ) : (
+                        <div style={{ width:'100%', aspectRatio:'16/10', background:'rgba(0,0,0,0.03)', border:'1px dashed rgba(0,0,0,0.1)', borderRadius:8, marginBottom:8, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, color:'#bbb' }}>
+                          Connecting…
+                        </div>
+                      )
+                    )}
                     <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
                       <span style={{ width:7, height:7, borderRadius:'50%', background:st.dot, ...(locked?{animation:'pulse 1.2s infinite'}:{}) }}/>
                       <span style={{ fontSize:12.5, fontWeight:700, color:'#16161f', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{m.hostname}</span>
@@ -317,6 +358,19 @@ export default function Classroom() {
           )}
         </div>
       </div>
+
+      {zoomed && screenshots[zoomed.id] && (
+        <div onClick={()=>setZoomed(null)} style={{ position:'fixed', inset:0, background:'rgba(16,16,31,0.85)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', cursor:'zoom-out', padding:40 }}>
+          <div onClick={e=>e.stopPropagation()} style={{ maxWidth:'90vw', maxHeight:'90vh' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+              <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>{zoomed.hostname}</div>
+              <button onClick={()=>setZoomed(null)} style={{ background:'rgba(255,255,255,0.12)', border:'none', color:'#fff', borderRadius:8, padding:'6px 12px', cursor:'pointer', fontSize:13 }}>Close ✕</button>
+            </div>
+            <img src={`data:image/jpeg;base64,${screenshots[zoomed.id].image}`} style={{ maxWidth:'90vw', maxHeight:'80vh', borderRadius:10, border:'1px solid rgba(255,255,255,0.15)', display:'block' }} alt="Live screen enlarged"/>
+          </div>
+        </div>
+      )}
+
       <style>{'@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}'}</style>
     </div>
   );

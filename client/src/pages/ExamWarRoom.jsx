@@ -10,8 +10,6 @@ const VIOLATION_LABELS = {
   clipboard_paste:    { label:'Clipboard paste',  color:'#f87171' },
   devtools_open:      { label:'DevTools opened',  color:'#fb7185' },
   new_process:        { label:'New process',      color:'#fb7185' },
-  usb_device:         { label:'USB device',       color:'#f472b6' },
-  multi_monitor:      { label:'Multi-monitor',    color:'#fb923c' },
   concurrent_session: { label:'Dual login',       color:'#c4b5fd' },
   inactivity:         { label:'Inactivity',       color:'#94a3b8' },
   right_click:        { label:'Right click',      color:'#94a3b8' },
@@ -36,8 +34,10 @@ export default function ExamWarRoom() {
   const [events,  setEvents]  = useState([]);
   const [loading, setLoading] = useState(true);
   const [screenshots, setScreenshots] = useState({}); // machineId -> { image, ts }
-  const [zoomed, setZoomed] = useState(null); // machine_id currently shown enlarged
+  const [zoomed, setZoomed] = useState(null); // score object currently enlarged
   const socketRef = useRef(null);
+  const scoresRef = useRef([]);
+  useEffect(() => { scoresRef.current = scores; }, [scores]);
 
   const load = () => {
     api.get(`/exams`).then(r => {
@@ -79,6 +79,22 @@ export default function ExamWarRoom() {
 
     return () => socketRef.current?.disconnect();
   }, [id]);
+
+  // Live-mirror every enrolled machine's screen while the war room is open.
+  // Heartbeat every 60s picks up machines enrolled mid-session; everything
+  // is unwatched cleanly when leaving this page.
+  useEffect(() => {
+    if (!socketRef.current) return;
+    const watchAll = () => {
+      scoresRef.current.forEach(s => socketRef.current?.emit('client:watch', { machineId: s.machine_id }));
+    };
+    const heartbeat = setInterval(watchAll, 60000);
+    watchAll();
+    return () => {
+      clearInterval(heartbeat);
+      scoresRef.current.forEach(s => socketRef.current?.emit('client:unwatch', { machineId: s.machine_id }));
+    };
+  }, [scores.length]);
 
   const sendWarning = async (machineId, hostname) => {
     try {
@@ -160,21 +176,21 @@ export default function ExamWarRoom() {
                       <TrustBadge score={s.trust_score} />
                     </div>
 
+                    {s.is_locked && (
+                      <div style={s.lockedBanner}>MACHINE LOCKED</div>
+                    )}
+
                     {screenshots[s.machine_id] ? (
                       <img
                         src={`data:image/jpeg;base64,${screenshots[s.machine_id].image}`}
-                        onClick={()=>setZoomed(s.machine_id)}
-                        style={{ width:'100%', borderRadius:8, marginBottom:8, cursor:'zoom-in', display:'block', border:'1px solid rgba(255,255,255,0.08)' }}
+                        onClick={() => setZoomed(s)}
+                        style={{ width:'100%', aspectRatio:'16/10', objectFit:'cover', borderRadius:8, marginBottom:8, cursor:'zoom-in', display:'block', border:'1px solid rgba(255,255,255,0.08)' }}
                         alt="Live screen"
                       />
                     ) : (
-                      <div style={{ width:'100%', aspectRatio:'16/10', background:'rgba(255,255,255,0.03)', border:'1px dashed rgba(255,255,255,0.1)', borderRadius:8, marginBottom:8, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10.5, color:'rgba(244,244,248,0.25)' }}>
+                      <div style={{ width:'100%', aspectRatio:'16/10', background:'rgba(255,255,255,0.03)', border:'1px dashed rgba(255,255,255,0.1)', borderRadius:8, marginBottom:8, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, color:'rgba(244,244,248,0.25)' }}>
                         No live feed yet
                       </div>
-                    )}
-
-                    {s.is_locked && (
-                      <div style={s.lockedBanner}>MACHINE LOCKED</div>
                     )}
 
                     {mEvents.length > 0 && (
@@ -225,16 +241,14 @@ export default function ExamWarRoom() {
         </div>
       </div>
 
-      {zoomed && screenshots[zoomed] && (
-        <div onClick={()=>setZoomed(null)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', cursor:'zoom-out', padding:40 }}>
+      {zoomed && screenshots[zoomed.machine_id] && (
+        <div onClick={()=>setZoomed(null)} style={{ position:'fixed', inset:0, background:'rgba(8,8,14,0.9)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', cursor:'zoom-out', padding:40 }}>
           <div onClick={e=>e.stopPropagation()} style={{ maxWidth:'90vw', maxHeight:'90vh' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-              <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>
-                {scores.find(sc=>sc.machine_id===zoomed)?.student_name || scores.find(sc=>sc.machine_id===zoomed)?.hostname}
-              </div>
-              <button onClick={()=>setZoomed(null)} style={{ background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', borderRadius:8, padding:'6px 12px', cursor:'pointer', fontSize:13 }}>Close ✕</button>
+              <div style={{ fontSize:14, fontWeight:700, color:'#f4f4f8' }}>{zoomed.student_name || zoomed.hostname}</div>
+              <button onClick={()=>setZoomed(null)} style={{ background:'rgba(255,255,255,0.1)', border:'none', color:'#f4f4f8', borderRadius:8, padding:'6px 12px', cursor:'pointer', fontSize:13 }}>Close ✕</button>
             </div>
-            <img src={`data:image/jpeg;base64,${screenshots[zoomed].image}`} style={{ maxWidth:'90vw', maxHeight:'80vh', borderRadius:10, border:'1px solid rgba(255,255,255,0.15)', display:'block' }} alt="Live screen enlarged"/>
+            <img src={`data:image/jpeg;base64,${screenshots[zoomed.machine_id].image}`} style={{ maxWidth:'90vw', maxHeight:'80vh', borderRadius:10, border:'1px solid rgba(255,255,255,0.15)', display:'block' }} alt="Live screen enlarged"/>
           </div>
         </div>
       )}
