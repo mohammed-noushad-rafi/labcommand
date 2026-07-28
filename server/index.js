@@ -89,10 +89,33 @@ io.on('connection', (socket) => {
     console.log(`Agent registered: ${hostname} (${ip})`);
   });
 
-  socket.on('exam:violation', async (data) => {
-    const { sessionId, machineId, studentName, eventType, metadata } = data;
+  socket.on('agent:violation', async (data) => {
+    const { machineId, eventType, metadata } = data;
+    const pool = require('./db/connection');
     const { processViolation } = require('./utils/trustScore');
-    await processViolation(sessionId, machineId, studentName, eventType, metadata);
+
+    // The agent only reports raw observations (machineId, eventType) — it
+    // has no idea which exam session is active. Resolve that here: find the
+    // currently-active session this machine is enrolled in, and the
+    // student/hostname to attribute the violation to.
+    const { rows } = await pool.query(
+      `SELECT ts.session_id, m.hostname
+       FROM exam_trust_scores ts
+       JOIN exam_sessions es ON es.id = ts.session_id
+       JOIN machines m ON m.id = ts.machine_id
+       WHERE ts.machine_id = $1 AND es.status = 'active'
+       LIMIT 1`,
+      [machineId]
+    );
+
+    if (rows.length === 0) {
+      // No active exam session for this machine — nothing to attach the
+      // violation to (e.g. it happened before the exam started).
+      return;
+    }
+
+    const { session_id, hostname } = rows[0];
+    await processViolation(session_id, machineId, hostname, eventType, metadata);
   });
 
   socket.on('agent:screenshot', (data) => {
