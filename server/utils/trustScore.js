@@ -1,201 +1,67 @@
-const express = require('express');
-const cors    = require('cors');
-const http    = require('http');
-const dns     = require('dns');
-const { Server } = require('socket.io');
-require('dotenv').config();
+const pool = require('../db/connection');
 
-// Railway's network has broken outbound IPv6 routing to some external hosts
-// (observed with Gmail's SMTP servers, ENETUNREACH). Preferring IPv4 for all
-// outbound connections avoids this app-wide. No effect on local dev.
-dns.setDefaultResultOrder('ipv4first');
-
-// CLIENT_URL supports one or more comma-separated origins, e.g.
-// "http://localhost:5173,http://10.71.41.157:5173" — add every address the
-// web app is actually served from (dev machine, LAN IP, eventual production
-// domain). A "*" wildcard is deliberately not supported here: it would
-// accept requests from any website, not just this app, and is invalid
-// alongside credentials:true anyway (browsers reject that combination).
-const allowedOrigins = (process.env.CLIENT_URL || '')
-  .split(',')
-  .map(o => o.trim())
-  .filter(Boolean);
-
-const corsOriginCheck = (origin, callback) => {
-  // requests with no Origin header (server-to-server, curl, the Python agent)
-  // aren't subject to browser CORS at all — always allow those through.
-  if (!origin) return callback(null, true);
-  if (allowedOrigins.includes(origin)) return callback(null, true);
-  callback(new Error(`Origin ${origin} not allowed by CORS`));
+const WEIGHTS = {
+  tab_switch:         10,
+  fullscreen_exit:    15,
+  clipboard_paste:    20,
+  devtools_open:      30,
+  new_process:        25,
+  concurrent_session: 40,
+  inactivity:          2,
+  right_click:         5,
+  usb_device:         20,
+  multi_monitor:      15,
 };
 
-const app    = express();
-const server = http.createServer(app);
-const io     = new Server(server, {
-  cors: { origin: corsOriginCheck, methods: ['GET','POST'] }
-});
-
-app.use(cors({ origin: corsOriginCheck, credentials: true }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.use('/api/auth',      require('./routes/auth'));
-app.use('/api/labs',      require('./routes/labs'));
-app.use('/api/machines',  require('./routes/machines'));
-app.use('/api/dashboard', require('./routes/dashboard'));
-app.use('/api/alerts',    require('./routes/alerts'));
-app.use('/api/commands', require('./routes/commands'));
-app.use('/api/equipment',   require('./routes/equipment'));
-app.use('/api/maintenance', require('./routes/maintenance'));
-app.use('/api/complaints',  require('./routes/complaints'));
-app.use('/api/inventory',   require('./routes/inventory'));
-app.use('/api/exams', require('./routes/exams'));
-app.use('/api/booking',  require('./routes/booking'));
-app.use('/api/users',    require('./routes/users'));
-app.use('/api/emaillog', require('./routes/emaillog'));
-app.use('/api/auditlog', require('./routes/auditlog'));
-app.use('/api/analytics', require('./routes/analytics'));
-app.use('/api/classroom', require('./routes/classroom'));
-app.use('/api/assistant', require('./routes/assistant'));
-app.get('/', (req, res) => res.json({ success: true, message: 'LabCommand API running' }));
-
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ success: false, message: 'Server error' });
-});
-
-const agentRegistry = new Map();
-
-io.on('connection', (socket) => {
-  console.log('Socket connected:', socket.id);
-
-  socket.on('agent:register', async (data) => {
-    // Coerce to Number consistently — agentRegistry keys must match exactly
-    // what client:watch/unwatch send, or Map.get() silently returns undefined
-    // and 'stream_start' never reaches the agent (no error, just nothing happens).
-    const machineId = Number(data.machineId);
-    const { hostname, ip, os } = data;
-    agentRegistry.set(machineId, socket);
-    socket.machineId = machineId;
-
-    const pool = require('./db/connection');
-    await pool.query(
-      `UPDATE machines SET status='online', ip_address=$1, os_info=$2, last_seen=NOW()
-       WHERE id=$3`,
-      [ip, os, machineId]
-    );
-
-    io.emit('machine:status', { machineId, status: 'online', hostname, ip });
-    console.log(`Agent registered: ${hostname} (${ip})`);
-  });
-
-  socket.on('agent:violation', async (data) => {
-    const { machineId, eventType, metadata } = data;
-    const pool = require('./db/connection');
-    const { processViolation } = require('./utils/trustScore');
-
-    // The agent only reports raw observations (machineId, eventType) — it
-    // has no idea which exam session is active. Resolve that here: find the
-    // currently-active session this machine is enrolled in, and the
-    // student/hostname to attribute the violation to.
+async function processViolation(sessionId, machineId, studentName, eventType, metadata = {}) {
+  try {
     const { rows } = await pool.query(
-      `SELECT ts.session_id, m.hostname
-       FROM exam_trust_scores ts
-       JOIN exam_sessions es ON es.id = ts.session_id
-       JOIN machines m ON m.id = ts.machine_id
-       WHERE ts.machine_id = $1 AND es.status = 'active'
-       LIMIT 1`,
-      [machineId]
+      `SELECT trust_score, is_locked FROM exam_trust_scores WHERE session_id=$1 AND machine_id=$2`,
+      [sessionId, machineId]
     );
 
-    if (rows.length === 0) {
-      // No active exam session for this machine — nothing to attach the
-      // violation to (e.g. it happened before the exam started).
-      return;
-    }
+    if (!rows.length) return null;
+    const current = rows[0];
+    if (current.is_locked) return current;
 
-    const { session_id, hostname } = rows[0];
-    await processViolation(session_id, machineId, hostname, eventType, metadata);
-  });
+    const session = await pool.query(
+      `SELECT violation_weights, auto_lock_threshold FROM exam_sessions WHERE id=$1`, [sessionId]
+    );
+    const weights   = session.rows[0]?.violation_weights || WEIGHTS;
+    const threshold = session.rows[0]?.auto_lock_threshold || 40;
 
-  socket.on('agent:screenshot', (data) => {
-    // Relay straight through to any client currently viewing this machine.
-    io.emit('exam:screenshot', data);
-  });
-
-  // A browser tab viewing a machine's live screen (MachineDetail, Classroom
-  // mode, or the exam war room) asks to start/stop receiving screenshots.
-  socket.on('client:watch', ({ machineId }) => {
-    const id = Number(machineId);
-    if (!socket.watchingMachineIds) socket.watchingMachineIds = new Set();
-    socket.watchingMachineIds.add(id);
-    const agentSocket = agentRegistry.get(id);
-    if (agentSocket) {
-      agentSocket.emit('command', { type: 'stream_start' });
-    }
-  });
-
-  socket.on('client:unwatch', ({ machineId }) => {
-    const id = Number(machineId);
-    if (socket.watchingMachineIds) socket.watchingMachineIds.delete(id);
-    const agentSocket = agentRegistry.get(id);
-    if (agentSocket) {
-      agentSocket.emit('command', { type: 'stream_stop' });
-    }
-  });
-
-  socket.on('agent:telemetry', async (data) => {
-    const { machineId, cpu, ram, disk, ramTotal, ramUsed, netSent, netRecv } = data;
-    const pool = require('./db/connection');
+    const deduction   = weights[eventType] || 5;
+    const newScore    = Math.max(0, current.trust_score - deduction);
+    const shouldLock  = newScore <= threshold;
+    const severity    = deduction >= 25 ? 'critical' : deduction >= 15 ? 'high' : 'medium';
 
     await pool.query(
-      `INSERT INTO telemetry_snapshots
-       (machine_id, cpu_percent, ram_percent, disk_percent, ram_total_gb, ram_used_gb, net_sent_mb, net_recv_mb)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-      [machineId, cpu, ram, disk, ramTotal, ramUsed, netSent, netRecv]
+      `UPDATE exam_trust_scores SET trust_score=$1, is_locked=$2, updated_at=NOW()
+       WHERE session_id=$3 AND machine_id=$4`,
+      [newScore, shouldLock, sessionId, machineId]
     );
 
-    await pool.query('UPDATE machines SET last_seen=NOW() WHERE id=$1', [machineId]);
-    io.emit('machine:telemetry', { machineId, cpu, ram, disk, ramTotal, ramUsed });
-  });
+    await pool.query(
+      `INSERT INTO exam_events (session_id, machine_id, student_name, event_type, severity, trust_score_before, trust_score_after, metadata)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [sessionId, machineId, studentName, eventType, severity, current.trust_score, newScore, JSON.stringify(metadata)]
+    );
 
-  socket.on('agent:processes', async (data) => {
-    const { machineId, processes } = data;
-    const pool = require('./db/connection');
-    for (const p of processes) {
-      await pool.query(
-        `INSERT INTO process_log (machine_id, process_name, pid, cpu_percent, mem_mb)
-         VALUES ($1,$2,$3,$4,$5)`,
-        [machineId, p.name, p.pid, p.cpu, p.mem]
-      );
+    const result = { machineId, studentName, eventType, severity, trustScoreBefore: current.trust_score, trustScoreAfter: newScore, isLocked: shouldLock };
+
+    global.io.emit('exam:violation', result);
+
+    if (shouldLock) {
+      const socket = global.agentRegistry.get(machineId);
+      if (socket) socket.emit('command', { type: 'exam_lock', reason: 'Trust score too low' });
+      global.io.emit('exam:machine_locked', { machineId, sessionId, trustScore: newScore });
     }
-    io.emit('machine:processes', { machineId, processes });
-  });
 
-  socket.on('disconnect', async () => {
-    // If this browser tab was watching a machine's live feed, tell that
-    // agent to stop streaming so it doesn't keep capturing for nobody.
-    if (socket.watchingMachineIds) {
-      for (const id of socket.watchingMachineIds) {
-        const agentSocket = agentRegistry.get(id);
-        if (agentSocket) agentSocket.emit('command', { type: 'stream_stop' });
-      }
-    }
-    if (socket.machineId) {
-      agentRegistry.delete(socket.machineId);
-      const pool = require('./db/connection');
-      await pool.query(
-        "UPDATE machines SET status='offline' WHERE id=$1",
-        [socket.machineId]
-      );
-      io.emit('machine:status', { machineId: socket.machineId, status: 'offline' });
-      console.log(`Agent disconnected: machine ${socket.machineId}`);
-    }
-  });
-});
+    return result;
+  } catch (err) {
+    console.error('Trust score error:', err.message);
+    return null;
+  }
+}
 
-global.io            = io;
-global.agentRegistry = agentRegistry;
-
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => console.log(`LabCommand server running on http://localhost:${PORT}`));
+module.exports = { processViolation };
