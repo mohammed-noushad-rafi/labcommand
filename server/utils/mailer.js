@@ -105,4 +105,19 @@ async function sendWelcomeEmail({ name, email, password, role, department }) {
   }
 }
 
-module.exports = { sendBookingNotification, sendWelcomeEmail };
+async function sendBookingReminder({ lab_name, date, start_time, end_time, purpose, recipients }) {
+  const formatted_date = new Date(date).toLocaleDateString('en-IN', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+  const subject = `Reminder: ${lab_name} session starts soon`;
+  const html = `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;border:1px solid #e9e9f0;border-radius:12px;overflow:hidden"><div style="background:linear-gradient(135deg,#d97706,#f59e0b);padding:24px 28px"><h2 style="color:#fff;margin:0;font-size:20px">LabCommand</h2><p style="color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:13px">Your session starts soon</p></div><div style="padding:24px 28px;background:#fff"><p style="color:#333;font-size:14px;margin:0 0 20px">This is a reminder that your lab session starts in about 30 minutes:</p><table style="width:100%;border-collapse:collapse;font-size:14px"><tr style="border-bottom:1px solid #f0f0f0"><td style="padding:10px 0;color:#888;width:120px">Lab</td><td style="padding:10px 0;font-weight:600;color:#111">${lab_name}</td></tr><tr style="border-bottom:1px solid #f0f0f0"><td style="padding:10px 0;color:#888">Date</td><td style="padding:10px 0;font-weight:600;color:#111">${formatted_date}</td></tr><tr style="border-bottom:1px solid #f0f0f0"><td style="padding:10px 0;color:#888">Time</td><td style="padding:10px 0;font-weight:600;color:#111">${start_time} to ${end_time}</td></tr>${purpose ? `<tr><td style="padding:10px 0;color:#888">Purpose</td><td style="padding:10px 0;color:#111">${purpose}</td></tr>` : ''}</table><div style="margin-top:20px;padding:12px 16px;background:#fffbeb;border-radius:8px;border-left:4px solid #d97706"><p style="margin:0;font-size:13px;color:#d97706;font-weight:500">Please arrive on time — unattended bookings may be automatically released.</p></div></div><div style="padding:14px 28px;background:#fafafd;border-top:1px solid #f0f0f6"><p style="margin:0;font-size:12px;color:#aaa">LabCommand — AI-Assisted Lab Network Management System</p></div></div>`;
+
+  try {
+    await sendViaBrevo({ to: recipients, subject, html });
+    console.log('[Mailer] Reminder email sent to', recipients.length, 'recipients');
+  } catch (err) {
+    console.error('[Mailer] Reminder email failed:', err.message);
+  }
+}
+
+module.exports = { sendBookingNotification, sendWelcomeEmail, sendBookingReminder };

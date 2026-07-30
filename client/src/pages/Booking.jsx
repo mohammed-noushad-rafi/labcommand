@@ -16,6 +16,7 @@ const STATUS_STYLE = {
   checked_in: { bg:'#eefbf3', color:'#0f9d58', border:'#bce8cc' },
   completed:  { bg:'#f5f5f7', color:'#9494a3', border:'#e0e0e6' },
   cancelled:  { bg:'#fef2f2', color:'#dc2626', border:'#f5bcbc' },
+  no_show:    { bg:'#fef8ee', color:'#d97706', border:'#fbd38a' },
 };
 
 const PURPOSE_OPTIONS = [

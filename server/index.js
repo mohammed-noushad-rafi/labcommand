@@ -214,5 +214,8 @@ io.on('connection', (socket) => {
 global.io            = io;
 global.agentRegistry = agentRegistry;
 
+const { startBookingScheduler } = require('./utils/bookingScheduler');
+startBookingScheduler();
+
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => console.log(`LabCommand server running on http://localhost:${PORT}`));
