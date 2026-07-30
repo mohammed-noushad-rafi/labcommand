@@ -115,6 +115,27 @@ export default function ExamWarRoom() {
     navigate('/exam');
   };
 
+  const [downloadingReport, setDownloadingReport] = useState(false);
+
+  const downloadReport = async () => {
+    setDownloadingReport(true);
+    try {
+      const res = await api.get(`/exams/${id}/report`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `exam-report-${id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Could not generate report: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setDownloadingReport(false);
+    }
+  };
+
   const machineEvents = (machineId) => events.filter(e => e.machine_id === machineId);
 
   if (loading) return <div style={s.loading}>Loading war room</div>;
@@ -149,6 +170,9 @@ export default function ExamWarRoom() {
           {session?.status === 'active' && (
             <button onClick={endExam} style={s.endBtn}>End exam</button>
           )}
+          <button onClick={downloadReport} disabled={downloadingReport} style={s.reportBtn}>
+            {downloadingReport ? 'Preparing…' : 'Download report'}
+          </button>
         </div>
       </div>
 
@@ -269,6 +293,7 @@ const s = {
   statChip:      { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:10, padding:'8px 14px', textAlign:'center' },
   statChipLabel: { fontSize:10, color:'rgba(244,244,248,0.45)', marginTop:1, fontWeight:500 },
   endBtn:        { background:'linear-gradient(135deg,#dc2626,#ef4444)', border:'none', color:'#fff', padding:'9px 16px', borderRadius:9, cursor:'pointer', fontSize:13, fontWeight:700, boxShadow:'0 4px 14px rgba(220,38,38,0.3)' },
+  reportBtn:     { background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.15)', color:'#f4f4f8', padding:'9px 16px', borderRadius:9, cursor:'pointer', fontSize:13, fontWeight:600 },
   sectionLabel:  { fontSize:11.5, color:'rgba(244,244,248,0.35)', marginBottom:10, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:600 },
   emptyBox:      { background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:12, padding:40, textAlign:'center', color:'rgba(244,244,248,0.3)' },
   lockedBanner:  { background:'rgba(248,113,113,0.15)', borderRadius:7, padding:'5px 8px', fontSize:11, color:'#fca5a5', marginBottom:8, textAlign:'center', fontWeight:700, letterSpacing:'0.03em' },
