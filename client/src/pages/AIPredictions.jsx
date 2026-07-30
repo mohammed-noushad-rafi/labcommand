@@ -58,7 +58,7 @@ export default function AIPredictions() {
       setMessages(prev => [...prev, { role:'assistant', text:r.data.reply }]);
     } catch (err) {
       const errMsg = err.response?.data?.message || 'Error connecting to AI assistant';
-      if (errMsg.includes('API key') || errMsg.includes('GEMINI')) setHasKey(false);
+      if (errMsg.includes('API key') || errMsg.includes('GROQ') || errMsg.includes('Invalid API Key')) setHasKey(false);
       setMessages(prev => [...prev, { role:'error', text:errMsg }]);
     }
     setLoading(false);
@@ -71,22 +71,22 @@ export default function AIPredictions() {
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
           <div>
             <h1 style={{ fontSize:24, fontWeight:700, color:'#16161f', margin:0, letterSpacing:'-0.02em' }}>AI assistant</h1>
-            <p style={{ fontSize:13, color:'#9494a3', marginTop:5 }}>Ask anything about your labs — powered by Gemini with live database context</p>
+            <p style={{ fontSize:13, color:'#9494a3', marginTop:5 }}>Ask anything about your labs — powered by Llama 3 with live database context</p>
           </div>
           <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:6, padding:'5px 12px', borderRadius:20, background: hasKey?'#eefbf3':'#fef2f2', border:'1px solid '+(hasKey?'#bce8cc':'#f5bcbc') }}>
             <span style={{ width:6, height:6, borderRadius:'50%', background:hasKey?'#0f9d58':'#dc2626' }}/>
-            <span style={{ fontSize:11, fontWeight:600, color:hasKey?'#0f9d58':'#dc2626' }}>{hasKey ? 'Gemini connected' : 'API key missing'}</span>
+            <span style={{ fontSize:11, fontWeight:600, color:hasKey?'#0f9d58':'#dc2626' }}>{hasKey ? 'Llama connected' : 'API key missing'}</span>
           </div>
         </div>
       </div>
 
       {!hasKey && (
         <div style={{ background:'#fef2f2', border:'1px solid #f5bcbc', borderRadius:12, padding:'16px 20px', marginBottom:20, flexShrink:0 }}>
-          <div style={{ fontWeight:600, color:'#dc2626', marginBottom:6 }}>Gemini API key not configured</div>
+          <div style={{ fontWeight:600, color:'#dc2626', marginBottom:6 }}>Groq API key not configured</div>
           <div style={{ fontSize:13, color:'#7c7c8a', lineHeight:1.6 }}>
-            To enable the AI assistant, add your Gemini API key to <code style={{ background:'#f7f7f9', padding:'1px 6px', borderRadius:4 }}>server/.env</code>:<br/>
-            <code style={{ background:'#f7f7f9', padding:'4px 8px', borderRadius:4, display:'inline-block', marginTop:6 }}>GEMINI_API_KEY=AIza...</code><br/>
-            Get a free key at <a href="https://aistudio.google.com" target="_blank" rel="noreferrer" style={{ color:'#4f46e5' }}>aistudio.google.com</a> then restart the server.
+            To enable the AI assistant, add your Groq API key to <code style={{ background:'#f7f7f9', padding:'1px 6px', borderRadius:4 }}>server/.env</code>:<br/>
+            <code style={{ background:'#f7f7f9', padding:'4px 8px', borderRadius:4, display:'inline-block', marginTop:6 }}>GROQ_API_KEY=gsk_...</code><br/>
+            Get a free key at <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" style={{ color:'#4f46e5' }}>console.groq.com/keys</a> then restart the server.
           </div>
         </div>
       )}
@@ -169,7 +169,7 @@ export default function AIPredictions() {
           </button>
         </div>
         <div style={{ fontSize:11, color:'#bbb', textAlign:'center', marginTop:8 }}>
-          Powered by Gemini 1.5 Flash · Real-time lab data context
+          Powered by Llama 3.3 70B (via Groq) · Real-time lab data context
         </div>
       </div>
       <style>{'@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}'}</style>
