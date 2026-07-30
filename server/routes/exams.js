@@ -200,7 +200,7 @@ router.get('/:id/report', async (req, res) => {
       events.forEach(e => {
         const time = new Date(e.recorded_at).toLocaleString('en-IN');
         doc.fontSize(9).fillColor('#7c7c8a').text(time, { continued: true });
-        doc.fillColor('#16161f').text(`   Machine #${e.machine_id}   ${e.event_type}   (score ${e.trust_score_before} → ${e.trust_score_after})`);
+        doc.fillColor('#16161f').text(`   Machine #${e.machine_id}   ${e.event_type}   (score ${e.trust_score_before} -> ${e.trust_score_after})`);
       });
     }
 
